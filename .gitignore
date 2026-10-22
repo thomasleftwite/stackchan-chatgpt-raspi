@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+dist/
+.pio/
+__pycache__/
+*.pyc
+*.log
+settings.json
+voice-reviews.json
+pairing.json
+secrets.json

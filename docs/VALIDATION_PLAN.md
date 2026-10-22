@@ -32,3 +32,11 @@
 - 音声・会話本文・APIキー・個人設定は記録しない
 
 参考: https://github.com/thomasleftwite/stackchan-chatgpt/blob/main/docs/validation.md
+
+## 2026-10-23 環境診断
+
+- 基準コミット: `c30d71d`（作業開始時、`origin/main` と一致）。
+- Debian 13.6 (trixie)、aarch64、Python 3.13.5、Git 2.47.3。
+- `python3 -m unittest discover -s tests -v`: 診断スクリプトの4件成功（欠落、Nodeバージョン境界、出力抑制、タイムアウト）。
+- `python3 scripts/check_environment.py`: 終了コード1、Node/npm未導入を検出。前提未充足であり、ホストの合格判定ではない。
+- 上流ソース未移管のため、Node/Windows回帰・GUI・AP・実機・外部API試験は未実施。

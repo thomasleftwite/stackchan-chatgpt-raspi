@@ -1,15 +1,16 @@
 # TODO — Raspberry Pi 5 ホスト移植
 
-更新: 2026-10-22。未チェックは未実施。優先度 P0 > P1 > P2 > P3。
+更新: 2026-10-23。未チェックは未実施。優先度 P0 > P1 > P2 > P3。
 
 ## P0 リポジトリ・環境
 
-- [ ] `thomasleftwite/stackchan-chatgpt-raspi` を新規作成（既存repoとは分離）
+- [x] `thomasleftwite/stackchan-chatgpt-raspi` の存在とorigin同期を確認（2026-10-23、`c30d71d`）
 - [ ] 上流 `stackchan-chatgpt` の基準コミットSHAとライセンスを記録
 - [ ] 上流ソースの安全な移管方法を決定（git履歴を維持するか、ソーススナップショットか）
 - [ ] この計画資料とAGENTS.mdを新規repoへ追加、PRレビュー、mainへmerge
 - [ ] Raspberry Pi上でcloneしてVS Codeで開く
-- [ ] `node --version`, `npm --version`, `python3 --version`, `git --version` を記録
+- [x] 実行環境を記録：Debian 13.6 / aarch64、Python 3.13.5、Git 2.47.3。Node/npm未導入
+- [x] 読み取り専用の環境診断 `scripts/check_environment.py` と単体テストを追加
 - [ ] 秘密情報がコミット対象に入らないことを確認
 
 ## P1 Node.js基盤

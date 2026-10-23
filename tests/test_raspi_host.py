@@ -9,6 +9,7 @@ import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import unittest
 import urllib.request
 from unittest.mock import Mock, patch
@@ -142,7 +143,7 @@ class HostProcessTests(unittest.TestCase):
 
 
 class HostGuiTests(unittest.TestCase):
-    def test_default_is_offline_and_key_is_cleared_before_start(self):
+    def test_default_is_offline_and_key_is_kept_until_app_close(self):
         import tkinter as tk
         from raspi.host_ui import HostWindow
         try: root = tk.Tk()
@@ -151,11 +152,13 @@ class HostGuiTests(unittest.TestCase):
         def run(stop, callback, **kwargs): entered.set(); stop.wait(2)
         factory.return_value.run.side_effect = run
         try:
-            app = HostWindow(root, factory)
+            from raspi.voice_settings import VoiceSettings
+            temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+            app = HostWindow(root, factory, settings=VoiceSettings(Path(temp.name)/'voice-settings.json'))
             self.assertTrue(app.fixture.get())
             app.fixture.set(False); app.key.set('fixture-session-key-long-enough'); app.start()
-            self.assertTrue(entered.wait(2)); self.assertEqual(app.key.get(), '')
+            self.assertTrue(entered.wait(2)); self.assertEqual(app.key.get(), 'fixture-session-key-long-enough')
             self.assertEqual(factory.call_args.kwargs['key'], 'fixture-session-key-long-enough')
             app.close(); app.worker.join(timeout=3)
-            self.assertFalse(app.worker.is_alive())
+            self.assertFalse(app.worker.is_alive()); self.assertEqual(app.key.get(), '')
         finally: root.destroy()

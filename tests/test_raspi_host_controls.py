@@ -3,6 +3,7 @@ import io
 import json
 import queue
 import threading
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -58,7 +59,13 @@ class ControlsGuiTests(unittest.TestCase):
             self.entered.set(); callback({'event': 'ready'}); stop.wait(5)
             callback({'event': 'stopped'})
         self.factory.return_value.run.side_effect = run
-        self.app = HostWindow(self.root, self.factory, clock=lambda: self.now)
+        from raspi.voice_settings import VoiceSettings, REVIEW_REASONS
+        from pathlib import Path
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        settings = VoiceSettings(Path(temp.name)/'voice-settings.json')
+        for voice in ('Kore', 'Puck'):
+            settings.decide('gemini-3.8-live', voice, True, REVIEW_REASONS['approved'][0], heard=True)
+        self.app = HostWindow(self.root, self.factory, clock=lambda: self.now, settings=settings)
         self.addCleanup(self.shutdown)
 
     def shutdown(self):
@@ -74,7 +81,7 @@ class ControlsGuiTests(unittest.TestCase):
         self.start_live(); self.app.start()
         self.assertEqual(self.factory.call_count, 1)
         self.assertEqual(self.factory.call_args.kwargs['voice'], 'Kore')
-        self.assertEqual(self.app.key.get(), '')
+        self.assertEqual(self.app.key.get(), 'fixture-session-key-long-enough')
         self.assertEqual(str(self.app.start_button['state']), 'disabled')
         self.app.request_stop()
         self.assertEqual(str(self.app.stop_button['state']), 'disabled')
@@ -82,11 +89,13 @@ class ControlsGuiTests(unittest.TestCase):
         self.app.worker.join(3); self.app.pump()
         self.assertFalse(self.app.running()); self.assertIn('停止中', self.app.device_status.get())
         self.assertEqual(str(self.app.start_button['state']), 'normal')
-        self.entered.clear(); self.start_live()
+        self.entered.clear(); self.app.start()
+        self.assertTrue(self.entered.wait(2)); self.app.pump()
         self.assertEqual(self.factory.call_count, 2)
+        self.assertEqual(self.factory.call_args.kwargs['key'], 'fixture-session-key-long-enough')
         self.app.close(); self.app.worker.join(3)
         self.assertFalse(self.app.running())
-        self.assertTrue(self.app.stop.is_set())
+        self.assertTrue(self.app.stop.is_set()); self.assertEqual(self.app.key.get(), '')
 
     def test_voice_change_is_queued_and_acknowledged_while_running(self):
         self.start_live(); self.app.voice.set('Puck'); self.app.choose_voice()

@@ -169,7 +169,7 @@ def main():
     modes.add_argument('--gui', action='store_true')
     parser.add_argument('--node'); parser.add_argument('--interface', default='wlan0')
     parser.add_argument('--model', default='gemini-3.8-live'); parser.add_argument('--port', type=int, default=48443)
-    parser.add_argument('--voice', default='', help='声カタログの声名（省略時はサービス既定）')
+    parser.add_argument('--voice', default=None, help='声カタログの声名（省略時は保存した採用済み選択、なければサービス既定）')
     parser.add_argument('--duration', type=float)
     args = parser.parse_args()
     if args.gui:
@@ -180,7 +180,11 @@ def main():
     try:
         if args.live and not sys.stdin.isatty(): raise HostError('INTERACTIVE_KEY_REQUIRED')
         key = getpass.getpass('Gemini API key（今回のみ使用）: ') if args.live else ''
-        service = make_service(fixture=args.fixture, key=key, model=args.model, voice=args.voice, node=args.node,
+        voice = args.voice or ''
+        if args.live and args.voice is None:
+            from raspi.voice_settings import VoiceSettings
+            voice = VoiceSettings().selected(args.model)
+        service = make_service(fixture=args.fixture, key=key, model=args.model, voice=voice, node=args.node,
             interface=args.interface, port=args.port)
         key = ''
         prior = {sig: signal.signal(sig, lambda *_: stop.set()) for sig in (signal.SIGTERM, signal.SIGINT)}

@@ -1,6 +1,6 @@
-# Stackchan Chat Host — Raspberry Pi 5 移植計画
+# Stackchan Chat Host — Raspberry Pi 5
 
-状態: **LinuxホストCLI/基本GUI・呼びかけから実音声回答まで単発確認済み / 移植継続中**（2026-10-23）
+状態: **主要機能実装・実機確認済み / リリース準備の残項目あり**（2026-10-23）
 
 - 上流: https://github.com/thomasleftwite/stackchan-chatgpt
 - ベースライン: Windows Host 0.6.0-rc.1 / AtomS3R + Atomic Voice Base A149
@@ -10,6 +10,7 @@
 ## ドキュメント
 
 - [現在の進捗と次の作業](docs/PROGRESS.md)
+- [リリース準備の残項目と合格条件](docs/RELEASE_READINESS.md)
 - [開発経緯と判断の記録](docs/DEVELOPMENT_HISTORY.md)
 - [移植仕様](docs/PROJECT_SPEC.md)
 - [アーキテクチャと移植対象](docs/ARCHITECTURE.md)
@@ -27,4 +28,4 @@
 
 端末はDHCPゲートウェイのTCP 48443へ接続する。既存端末を無改造で使うには、Raspberry Piが端末側ネットワークのゲートウェイになる構成が必要。**既存のRaspberry Pi Connect/SSH接続を維持するまで、Wi-Fi/APやNetworkManager設定を変更しない。**
 
-上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト54件とオフライン自己診断が成功しています。Linux用CLI/GUIを追加し、声のプルダウン・開始/停止・端末通信/会話モニターを実装しました。Python124件中120成功・Windows専用4件スキップ。従来の基本GUIでは、実機で呼びかけからGemini Liveの音声回答まで1回確認しています。新GUIでも実音声回答2回と、稼働中の声変更による声の切り替えを利用者と確認しました。ホスト停止中に専用待受を起動する端末試聴・採用/除外・声設定保存を追加し、実機の試聴と保存まで確認しました。キーの永続保護と長時間稼働・障害復帰の検証は残っています。起動・検証手順は開発環境資料を参照してください。
+上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト54件とオフライン自己診断が成功しています。Linux用CLI/GUIを追加し、声のプルダウン・開始/停止・端末通信/会話モニターを実装しました。Python139件中135成功・Windows専用4件スキップ。従来の基本GUIでは、実機で呼びかけからGemini Liveの音声回答まで1回確認しています。新GUIでも実音声回答2回と、稼働中の声変更による声の切り替えを利用者と確認しました。ホスト停止中に専用待受を起動する端末試聴・採用/除外・声設定保存を追加し、実機の試聴と保存まで確認しました。APIキーの暗号化保存・次回復元と、複数声の保存・再選択も確認済みです。Pi本体再起動、長時間稼働・実機の障害復帰、配布・起動方式の整備が残っています。起動・検証手順は開発環境資料を参照してください。

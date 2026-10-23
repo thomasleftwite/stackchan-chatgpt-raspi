@@ -255,7 +255,11 @@
     },
     {
       "path": "server/wireless-host.ts",
-      "reason": "Allow exactly 127.0.0.1/32 for explicit boolean fixture mode to test process lifecycle without AP or API."
+      "reason": "Allow exactly 127.0.0.1/32 for explicit boolean fixture mode; extract the same AP boundary for conversation and terminal audition hosts."
+    },
+    {
+      "path": "server/gemini-server.ts",
+      "reason": "Add an optional immediate disconnect callback for terminal audition cancellation; retain the existing conversation busy/idle behavior."
     }
   ]
 }

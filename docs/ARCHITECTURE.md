@@ -19,8 +19,8 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 ## 実装済みLinuxホスト
 
 - `raspi/host_network.py`: NetworkManagerのAP/sharedと一意なprivate IPv4/サブネットを読み取る。設定変更は行わない。
-- `raspi/host.py`: ARM64 Nodeを起動し、標準入力で待受設定を渡す。キーは明示入力のセッション内だけで保持し、子の環境へ渡す。EOF→SIGTERM→SIGKILLで自身のプロセスグループを回収する。
-- `raspi/host_ui.py`: Tkinterで声選択・開始/停止・通信/会話モニターを表示。声カタログは既存serverのJSONを共有し、稼働中の変更は有界キューから既存stdin voiceコマンドへ渡す。確認応答は安全なrequest IDだけをGUIへ返し、進行中の回答は既存VoiceControlのスナップショットを維持する。初期状態はAPI不要のfixture。Live利用時のキーはアプリ終了まで非表示のメモリ内で再利用し、明示消去または終了時に削除する。ファイルへ保存しない。
+- `raspi/host.py`: ARM64 Nodeを起動し、標準入力で待受設定を渡す。キーはLinux用の暗号化ストアから復元し、未設定時は非表示入力で保存する。実行時は子の環境へ渡す。EOF→SIGTERM→SIGKILLで自身のプロセスグループを回収する。
+- `raspi/host_ui.py`: Tkinterで声選択・開始/停止・通信/会話モニターを表示。声カタログは既存serverのJSONを共有し、稼働中の変更は有界キューから既存stdin voiceコマンドへ渡す。確認応答は安全なrequest IDだけをGUIへ返し、進行中の回答は既存VoiceControlのスナップショットを維持する。初期状態はAPI不要のfixture。Live利用時のキーは`raspi/key_store.py`で暗号化保存・次回復元し、変更まで再利用する。終了は入力欄だけを消去し、明示削除は保存暗号文も削除する。保存失敗時は会話・試聴を開始しない。
 - 端末モニターは既存health/セッション開始/再生完了イベントの受信時刻を保持。既存端末は一度成功したhealthを再送しないため、30秒以上未受信なら定期通知なし・現在の接続は判定できない旨を示し、端末の画面状態やWi-Fi切断を断定しない。履歴は固定文言80件に限定し、provider本文・PCM・声の選択値を記録しない。
 - `raspi/provision*.py`: 端末WiFiManager経由の接続先設定とPi AP復帰。実機設定の変更は承認済みの操作範囲に限る。
 
@@ -28,7 +28,7 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 - `raspi/voice_ui.py`: ホスト停止中・端末Sleeping確認後の明示操作で生成/再生。試聴中はホストの開始を禁止し、再生完了した候補だけ採用可能。通常一覧は採用済みの声とサービス既定。稼働中の選択変更は既存voiceコマンドを使用し、使用中の声の除外はホストを停止する。
 - `raspi/voice_settings.py`: XDGの専用ディレクトリ700・ファイル600で声の評価と選択だけ保存。カタログrevision/モデルを照合。原子的置換とfsync、サイズ/権限/シンボリックリンク検証、破損時の明示再評価による原本保全・復旧を提供。GUIとCLIは同じ保存選択を読む。
 
-Windows用desktopと既存serverは変更しない。LinuxのAPIキー永続保護と、稼働中ホストでの試聴は今後の実装とする。
+Windows用desktopと既存serverは変更しない。LinuxのAPIキー永続保護はAES-256-GCMで実装。稼働中ホストでの試聴は今後の実装とする。
 
 ## Windows依存の差し替え候補
 
@@ -68,3 +68,7 @@ AP側のみでlistenし、同一サブネットの接続元だけ許可する。
 - 専用ホストのstdoutは固定イベントとrequest ID/失敗分類だけ。PCMをPython/GUIへ渡さず、preview-playedとsession-idleの両方を受けてから親が停止・回収する。切断・中断・期限切れを成功扱いしない。終了時は生成ワーカーを含む自身のプロセスグループを回収する。
 - `raspi.host.make_device_preview_service`、VoiceUiの端末バックエンドを追加。通常ホスト/試聴を排他にし、再生完了通知後だけ声評価のheardを付ける。採用/除外・XDG保存は従来と同じ。Piローカル試聴は任意の補助経路として保持。
 - 端末ファーム、Windows製品コード、実機ネットワーク設定は変更しない。共通の待受境界抽出は通常会話を含むNode全54件で回帰確認。
+
+## Pi内のAPIキー暗号化保存
+
+`raspi/key_store.py`は既存cryptographyのAESGCMを使用する。256bitのランダムなローカル暗号鍵と、保存ごとに新しい12バイトnonce、バージョン識別子をAADに使う認証付き暗号文を別XDG領域へ保存する。専用ディレクトリ700/ファイル600、所有者・サイズ・リンク検査、dirfdによるディレクトリ固定、プロセス間ロック、fsyncと原子的置換で保護する。破損・鍵紛失時は自動上書きせず固定エラーを返す。同一ユーザー/rootやディスク全体の流出への保護ではない。詳細と復旧操作は[Piアプリ](../raspi/README.md)。端末ファーム・Windows製品コード・serverは変更しない。

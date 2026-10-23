@@ -1,5 +1,6 @@
 """Voice forwarding, GUI lifecycle and event monitor without paid API calls."""
 import io
+import os
 import json
 import queue
 import threading
@@ -62,6 +63,7 @@ class ControlsGuiTests(unittest.TestCase):
         from raspi.voice_settings import VoiceSettings, REVIEW_REASONS
         from pathlib import Path
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        self.enterContext(patch.dict(os.environ, XDG_CONFIG_HOME=temp.name, XDG_DATA_HOME=temp.name+'/data'))
         settings = VoiceSettings(Path(temp.name)/'voice-settings.json')
         for voice in ('Kore', 'Puck'):
             settings.decide('gemini-3.8-live', voice, True, REVIEW_REASONS['approved'][0], heard=True)

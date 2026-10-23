@@ -1,4 +1,4 @@
-"""Linux host lifecycle; explicit live mode, session-only key, no raw logs."""
+"""Linux host lifecycle; explicit live mode, encrypted key store, no raw logs."""
 import argparse
 import getpass
 import json
@@ -190,8 +190,14 @@ def main():
     stop = threading.Event()
     prior = {}
     try:
-        if args.live and not sys.stdin.isatty(): raise HostError('INTERACTIVE_KEY_REQUIRED')
-        key = getpass.getpass('Gemini API key（今回のみ使用）: ') if args.live else ''
+        key = ''
+        if args.live:
+            from raspi.key_store import KeyStore
+            store = KeyStore(); key = store.load()
+            if not key:
+                if not sys.stdin.isatty(): raise HostError('INTERACTIVE_KEY_REQUIRED')
+                key = getpass.getpass('Gemini API key（Pi内に暗号化保存）: ').strip()
+                store.save(key)
         voice = args.voice or ''
         if args.live and args.voice is None:
             from raspi.voice_settings import VoiceSettings

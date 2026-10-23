@@ -24,3 +24,7 @@ releases/
 # Linux private voice preferences and corruption backups
 voice-settings.json
 voice-settings.json.*
+gemini-key.enc
+key-encryption.key
+.api-key.lock
+.key-write-*

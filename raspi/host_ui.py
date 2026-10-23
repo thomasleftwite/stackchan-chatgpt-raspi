@@ -8,6 +8,7 @@ from tkinter import ttk
 from raspi.host import make_service, make_device_preview_service, public_event
 from raspi.voice_ui import VoiceUi
 from raspi.voice_preview import generate_sample, play_pcm
+from raspi.key_store import KeyStore
 
 LABELS = {
     'ready': '待受中。端末からの接続を受け付けます。',
@@ -28,7 +29,7 @@ FAILURE_LABELS = {'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA':
 
 class HostWindow(VoiceUi):
     def __init__(self, root, factory=make_service, clock=time.monotonic, *, settings=None,
-                 generator=generate_sample, player=play_pcm, device_factory=make_device_preview_service):
+                 generator=generate_sample, player=play_pcm, device_factory=make_device_preview_service, key_store=None):
         self.root = root; self.factory = factory; self.clock = clock
         self.worker = None; self.closing = False; self.stopping = False
         self.init_voices(settings, generator, player, device_factory)
@@ -42,11 +43,21 @@ class HostWindow(VoiceUi):
         self.fixture_box = ttk.Checkbutton(frame, text='APIを使わず接続だけ確認（無音応答）',
             variable=self.fixture, command=self.controls)
         self.fixture_box.pack(anchor='w', pady=12)
+        self.key_store = key_store if key_store is not None else KeyStore()
         self.key = tk.StringVar(); self.model = tk.StringVar(value='gemini-3.8-live')
-        ttk.Label(frame, text='Gemini APIキー（アプリ終了まで保持、ファイル保存なし）').pack(anchor='w')
+        self.key_status = tk.StringVar()
+        try:
+            self.key.set(self.key_store.load())
+            self.key_status.set('保存済みキーを復元しました。' if self.key.get() else '入力後に保存、または開始・試聴時に自動保存します。')
+        except Exception: self.key_status.set('保存キーを復元できません。権限を確認するか、保存キーを削除して再設定してください。')
+        ttk.Label(frame, text='Gemini APIキー（Pi内に暗号化保存・次回起動時に復元）').pack(anchor='w')
         self.key_box = ttk.Entry(frame, textvariable=self.key, show='●'); self.key_box.pack(fill='x', pady=5)
-        self.clear_key_button = ttk.Button(frame, text='キーを消去', command=lambda: self.key.set(''))
-        self.clear_key_button.pack(anchor='w')
+        key_buttons = ttk.Frame(frame); key_buttons.pack(anchor='w')
+        self.save_key_button = ttk.Button(key_buttons, text='APIキーを保存・更新', command=self.save_key)
+        self.save_key_button.pack(side='left')
+        self.clear_key_button = ttk.Button(key_buttons, text='保存キーを削除', command=self.clear_key)
+        self.clear_key_button.pack(side='left', padx=8)
+        ttk.Label(frame, textvariable=self.key_status, wraplength=700).pack(anchor='w')
         ttk.Label(frame, text='Gemini Liveモデル').pack(anchor='w')
         self.model_box = ttk.Entry(frame, textvariable=self.model); self.model_box.pack(fill='x', pady=5)
         self.model.trace_add('write', lambda *_: self.refresh_voices())
@@ -55,7 +66,7 @@ class HostWindow(VoiceUi):
         self.voice_box = ttk.Combobox(frame, textvariable=self.voice, state='readonly')
         self.voice_box.pack(fill='x', pady=5)
         self.voice_box.bind('<<ComboboxSelected>>', self.choose_voice)
-        self.voice_status = tk.StringVar(value='採用した声と選択を保存します。APIキー・音声は保存しません。')
+        self.voice_status = tk.StringVar(value='採用した声と選択を保存します。音声は保存しません。')
         ttk.Label(frame, textvariable=self.voice_status, wraplength=700).pack(anchor='w')
         self.review_button = ttk.Button(frame, text='声を試聴・採用・保存', command=self.review_voices)
         self.review_button.pack(anchor='w', pady=5)
@@ -97,6 +108,7 @@ class HostWindow(VoiceUi):
         state = 'disabled' if busy or self.fixture.get() or locked else 'normal'
         self.key_box.configure(state=state); self.model_box.configure(state=state)
         self.clear_key_button.configure(state='disabled' if busy or locked else 'normal')
+        self.save_key_button.configure(state='disabled' if busy or locked else 'normal')
         if self.preview_key_box is not None and self.preview_key_box.winfo_exists():
             self.preview_key_box.configure(state='disabled' if busy or locked else 'normal')
         if self.preview_target_box is not None and self.preview_target_box.winfo_exists():
@@ -122,6 +134,23 @@ class HostWindow(VoiceUi):
             self.voice_status.set('変更待ちが多いため受け付けられません。少し待って選び直してください。'); return
         self.voice_status.set('声の変更を送信中です。進行中の回答の声は変わりません。')
 
+    def save_key(self):
+        if self.running() or self.preview_running() or self.preview_job is not None or self.closing: return False
+        try: self.key_store.save(self.key.get().strip())
+        except Exception:
+            self.key_status.set('APIキーを保存できません。入力と保存先の権限を確認してください。処理は開始していません。')
+            return False
+        self.key.set(self.key.get().strip())
+        self.key_status.set('APIキーを暗号化して保存しました。変更・削除するまで再利用します。')
+        return True
+
+    def clear_key(self):
+        if self.running() or self.preview_running() or self.preview_job is not None or self.closing: return
+        try: self.key_store.delete()
+        except Exception:
+            self.key_status.set('保存キーを削除できません。保存先の権限を確認してください。'); return
+        self.key.set(''); self.key_status.set('保存キーを削除しました。')
+
     def start(self):
         if self.running() or self.closing or self.preview_running() or self.preview_job is not None: return
         # Finish handling the previous run before resetting the monitor.
@@ -136,6 +165,9 @@ class HostWindow(VoiceUi):
             try: self.settings.select(model, voice)
             except Exception:
                 self.status.set('声の選択を保存できませんでした。設定ファイルの権限を確認してください。'); return
+        if not fixture and not self.save_key():
+            self.status.set('APIキーを保存できないため開始していません。'); return
+        if not fixture: key = self.key.get()
         self.stop = threading.Event(); self.commands = queue.Queue(maxsize=32)
         self.stopping = False; self.failed = False; self.host_ready = False; self.last_seen = None
         self.status.set('起動中…'); self.host_status.set('ホスト：起動中'); self.session_status.set('会話：待機')

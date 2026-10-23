@@ -5,7 +5,7 @@ import tempfile
 import threading
 import unittest
 import os
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from raspi.voice_settings import VoiceSettings, REVIEW_REASONS
 
@@ -22,6 +22,7 @@ class VoiceGuiTests(unittest.TestCase):
         except tk.TclError: self.skipTest('Tk display unavailable')
         self.root.withdraw(); self.addCleanup(self.root.destroy)
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
+        self.enterContext(patch.dict(os.environ, XDG_CONFIG_HOME=self.temp.name, XDG_DATA_HOME=self.temp.name+'/data'))
         self.store = VoiceSettings(Path(self.temp.name)/'voice-settings.json')
         self.pcm = bytearray(b'\x01\x00'*24)
         self.generator = Mock(return_value=self.pcm); self.player = Mock(return_value=True)

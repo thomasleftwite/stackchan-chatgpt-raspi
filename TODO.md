@@ -9,6 +9,7 @@
 - [x] 上流ソースの安全な移管方法を決定（固定SHAからホスト関連だけをスナップショット移管。実際の移管は未実施）
 - [ ] 移管対象のファイル一覧を精査し、LICENSE・server・desktop・関連テストを固定SHAから移管
 - [ ] この計画資料とAGENTS.mdを新規repoへ追加、PRレビュー、mainへmerge
+  - 2026-10-23: PiのGitHub CLI認証（`thomasleftwite`）とGit credential helperを確認し、feature branchのpush dry-run成功。GitHub連携アプリの403は別経路のため未解消。
 - [x] Raspberry Pi上のclone済み作業ツリーを確認（VS Codeでの表示確認は別項目）
 - [ ] VS Codeで作業ツリーを開いたことを確認
 - [x] 実行環境を記録：Debian 13.6 / aarch64、Python 3.13.5、Git 2.47.3。Node/npm未導入

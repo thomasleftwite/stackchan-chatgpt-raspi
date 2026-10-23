@@ -1,8 +1,8 @@
 # Raspberry Pi移植の進捗
 
-更新: 2026-10-23。PR #2（ホストソース移管・起動停止検証）とPR #3（有線上流・AP・端末Wi-Fi設定アプリ）の統合時点の整理。
+更新: 2026-10-23。ホストCLI/基本GUIの統合と、承認済み実API会話の単発試験までの整理。
 
-統合結果: PR #2は `ed15d4b`、PR #3は `d3f000d` でmainへmerge済み。その後の `feat/raspi-host-cli` でLinuxホストCLI/基本GUIに着手した。
+統合結果: PR #2は `ed15d4b`、PR #3は `d3f000d`、PR #4（LinuxホストCLI/基本GUI）は `c581b22` でmainへmerge済み。以降の実機検証記録は文書用branchに分離した。
 
 ## 完了したこと
 

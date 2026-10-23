@@ -205,3 +205,22 @@
 - `.runtime/node-v22.23.4-linux-arm64/bin/node --test --test-timeout=10000 server/dist/test/*.test.js`: 47件すべて成功、失敗/スキップ0、終了コード0。実API呼び出し・音声生成・実機操作は行っていない。
 - Pythonは変更しておらず、前工程の88件中84成功・4スキップを参照して再実行しない。合成peerによるplayed通知は実スピーカー再生の証拠とはしない。実機Wi-Fi断、実API処理中断、Pi再起動、長時間稼働、Windows実測は未検証。
 - 最終差分を自己レビューし、`git diff --check`成功、更新文書のローカルリンク不在0件、禁止対象の変更0件、検証後のwireless-host残存0件を確認した。
+
+## 2026-10-23 RasPi GUIの声選択・サービス制御・端末モニター
+
+- `raspi/host.py`、`raspi/host_ui.py`、ホスト試験と関連資料を更新。Windows/端末ファーム/既存server/依存/ネットワーク実機設定に変更なし。
+- GUI: 声カタログの選択、サービス開始/停止/再開・二重開始防止、キー欄消去、終了待機、通信未確認への30秒遷移と再受信時の復帰、生成/再生/待機状態、エラー保持、秘密値の履歴除外と履歴件数制限を試験。
+- 声: 初期環境へのGEMINI_VOICEの限定継承、不正なモデル/声の拒否、stdinへのvoiceコマンド限定送信、確認応答のrequest IDだけの保持を試験。稼働中の回答の声の維持と次質問への反映は既存Node VoiceControl回帰も成功。
+- 初回のsandbox内Python試験ではソケット作成がPermissionError、GUIは表示接続不可でスキップ。ローカル画面/ソケットを許可して再実行し、GUI終了時の予約コールバックの回収を修正した後の `python3 -m unittest discover -s tests -v` は全95件中91成功・Windows専用4件スキップ、終了コード0。追加回帰7件はすべて成功し、Tkの終了後コールバックエラーも出なくなった。
+- `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" npm --prefix server run build` 成功。`.runtime/node-v22.23.4-linux-arm64/bin/node --test --test-timeout=10000 server/dist/test/*.test.js` は47件成功、失敗/スキップ0、終了コード0。
+- `python3 -m py_compile raspi/host.py raspi/host_ui.py tests/test_raspi_host_controls.py`、`git diff --check` 成功。
+- 未検証: 新GUIで実端末の声を変更した際の聴感、実API会話、Windows実環境、長時間/画面サイズ別の操作。試聴・採用評価・保存とキー永続保護は未実装。端末状態は通信イベントからの観測であり、Ready/Sleepingの直接取得やWi-Fi断の確定検知ではない。
+
+## 2026-10-23 新GUIの実AP起動停止・実音声/声変更の確認
+
+- 開始HEAD: `2aae26c`、`feat/raspi-host-controls`（PR #7）。利用者の「ok、すすめて」により実機確認を継続。Git除外の一時GUIハーネスで製品HostWindow/HostServiceを使用し、入力キー/音声/質問本文/選択した声を記録せず固定イベントだけ観測した。
+- APのfixture開始/16秒待機/停止を2回実施。どちらもreadyと停止/子プロセス回収を確認。1回目はdevice-onlineも受信。2回目は観測中のdevice-onlineなしであり、端末の再接続成功とは扱わない。
+- 利用者が新GUIの非表示欄にキーを入力してホストを開始。2回ともsession-busy→turn-complete→voice-played→session-idleを受信し、最初の再生完了後のvoiceコマンドにvoice-selectedの確認応答を受信した。利用者も「2回とも回答し、声も変わった」と確認。2回目の再生後にホストを停止し、stoppedを受信。キーは保存せず、端末ファームと実機ネットワーク設定の変更なし。
+- 状態表示の修正: 固定SHAの既存`src/WirelessLink.cpp`ではhealth成功後にonlineを記憶し、Wi-Fi断/会話失敗でofflineになるまで待機中のGETを再送しない。したがって30秒の未受信から切断を示唆する表示は不適切。固定時計のGUI回帰で旧表示が失敗することを確認後、「定期通知なし（現在の接続は判定できません）」へ変更。新たな通信・監視ポーリングやファーム変更は追加しない。
+- 修正後の`python3 -m unittest discover -s tests -v`: 95件中91成功・Windows専用4件スキップ、終了コード0。`py_compile`と`git diff --check`成功。Node/serverは変更しておらず、直前のbuild/47件成功を参照し再実行しない。
+- 未検証: 実Wi-Fi断や実API中断の復帰、Pi再起動、長時間稼働、Windows実環境。Pi自身の声試聴/採用/保存とキー永続保護は引き続き未実装。

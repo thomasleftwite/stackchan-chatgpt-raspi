@@ -1,17 +1,37 @@
-"""First Linux conversation-host UI; keys are session-only."""
+"""Linux host controls and communication monitor; no private event payloads."""
 import queue
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk
 
-from raspi.host import make_service
+from raspi.host import make_service, public_event, voice_candidates
+
+LABELS = {
+    'ready': '待受中。端末からの接続を受け付けます。',
+    'device-online': '端末からの通信を確認しました。',
+    'session-busy': '質問・回答を処理しています。',
+    'session-idle': '待受中。',
+    'turn-complete': '回答の生成が完了しました。端末へ送信しています。',
+    'voice-played': '端末から再生完了を受信しました。',
+    'turn-failed': '応答に失敗しました。APIキー・利用制限・接続状態を確認してください。',
+    'failed': '起動・実行に失敗しました。AP・Node環境・APIキーを確認してください。',
+    'stopped': '停止しました。',
+    'voice-selected': '声の変更を受け付けました。次の質問から反映します。',
+    'voice-failed': '声を変更できませんでした。選択とモデルを確認してください。',
+}
+FAILURE_LABELS = {'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA': 'APIの利用制限に達しました。',
+    'MODEL': '指定したモデルを利用できません。', 'TIMEOUT': '応答が時間切れになりました。'}
 
 
 class HostWindow:
-    def __init__(self, root, factory=make_service):
-        self.root = root; self.factory = factory; self.worker = None; self.closing = False
-        self.events = queue.Queue(); self.stop = threading.Event()
-        root.title('スタックちゃん — Raspberry Piホスト'); root.geometry('720x420')
+    def __init__(self, root, factory=make_service, clock=time.monotonic):
+        self.root = root; self.factory = factory; self.clock = clock
+        self.worker = None; self.closing = False; self.stopping = False
+        self.events = queue.Queue(); self.commands = queue.Queue(maxsize=32)
+        self.stop = threading.Event(); self.request_id = 0
+        self.last_seen = None; self.host_ready = False; self.failed = False
+        root.title('スタックちゃん — Raspberry Piホスト'); root.geometry('760x760')
         frame = ttk.Frame(root, padding=24); frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='端末専用APでホストを起動します。有線インターネットを使用します。').pack(anchor='w')
         self.fixture = tk.BooleanVar(value=True)
@@ -23,58 +43,152 @@ class HostWindow:
         self.key_box = ttk.Entry(frame, textvariable=self.key, show='●'); self.key_box.pack(fill='x', pady=5)
         ttk.Label(frame, text='Gemini Liveモデル').pack(anchor='w')
         self.model_box = ttk.Entry(frame, textvariable=self.model); self.model_box.pack(fill='x', pady=5)
-        ttk.Label(frame, text='接続確認を外すと、端末からの質問時にGemini APIを使用します。').pack(anchor='w', pady=10)
+        self.model.trace_add('write', lambda *_: self.refresh_voices())
+        ttk.Label(frame, text='声（サービス既定、またはカタログから選択）').pack(anchor='w')
+        self.voice = tk.StringVar(value='サービス既定')
+        self.voice_box = ttk.Combobox(frame, textvariable=self.voice, state='readonly')
+        self.voice_box.pack(fill='x', pady=5)
+        self.voice_box.bind('<<ComboboxSelected>>', self.choose_voice)
+        self.voice_status = tk.StringVar(value='選択した声を質問に使用します。試聴・採用評価・保存は今後対応します。')
+        ttk.Label(frame, textvariable=self.voice_status, wraplength=700).pack(anchor='w')
+        ttk.Label(frame, text='接続確認を外すと、端末からの質問時にGemini APIを使用します。').pack(anchor='w', pady=8)
+        buttons = ttk.Frame(frame); buttons.pack(anchor='w')
+        self.start_button = ttk.Button(buttons, text='ホストサービスを開始', command=self.start)
+        self.start_button.pack(side='left', padx=(0, 8))
+        self.stop_button = ttk.Button(buttons, text='停止', command=self.request_stop); self.stop_button.pack(side='left')
         self.status = tk.StringVar(value='停止中。接続確認、またはAPIキーを指定して開始してください。')
-        ttk.Label(frame, textvariable=self.status, wraplength=660).pack(anchor='w', pady=12)
-        buttons = ttk.Frame(frame); buttons.pack(anchor='e')
-        self.start_button = ttk.Button(buttons, text='開始', command=self.start); self.start_button.pack(side='left', padx=5)
-        self.stop_button = ttk.Button(buttons, text='停止', command=self.stop.set); self.stop_button.pack(side='left')
-        self.controls(); root.protocol('WM_DELETE_WINDOW', self.close); root.after(100, self.pump)
+        ttk.Label(frame, textvariable=self.status, wraplength=700).pack(anchor='w', pady=10)
+        monitor = ttk.LabelFrame(frame, text='端末の状態モニター', padding=10); monitor.pack(fill='x')
+        self.host_status = tk.StringVar(value='ホスト：停止中')
+        self.device_status = tk.StringVar(value='端末：ホスト停止中')
+        self.session_status = tk.StringVar(value='会話：待機')
+        for value in (self.host_status, self.device_status, self.session_status):
+            ttk.Label(monitor, textvariable=value).pack(anchor='w')
+        self.history = tk.Text(frame, height=7, state='disabled', wrap='word')
+        self.history.pack(fill='both', expand=True, pady=(10, 0))
+        self.refresh_voices(); self.controls()
+        root.protocol('WM_DELETE_WINDOW', self.close)
+        self.after_id = root.after(100, self.pump)
+        root.bind('<Destroy>', self.destroyed, add='+')
+
+    def running(self):
+        return self.worker is not None and self.worker.is_alive()
+
+    def refresh_voices(self):
+        values = ('サービス既定',) + voice_candidates(self.model.get())
+        self.voice_box.configure(values=values)
+        if self.voice.get() not in values: self.voice.set('サービス既定')
 
     def controls(self):
-        busy = self.worker is not None and self.worker.is_alive()
-        self.start_button.configure(state='disabled' if busy else 'normal')
-        self.stop_button.configure(state='normal' if busy else 'disabled')
-        self.fixture_box.configure(state='disabled' if busy else 'normal')
-        state = 'disabled' if busy or self.fixture.get() else 'normal'
+        busy = self.running(); locked = self.closing or self.stopping
+        self.start_button.configure(state='disabled' if busy or locked else 'normal')
+        self.stop_button.configure(state='normal' if busy and not locked else 'disabled')
+        self.fixture_box.configure(state='disabled' if busy or locked else 'normal')
+        state = 'disabled' if busy or self.fixture.get() or locked else 'normal'
         self.key_box.configure(state=state); self.model_box.configure(state=state)
+        self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
+        # The provider's default cannot be restored by a voice command; restart to use it.
+        self.voice_box.configure(values=voice_candidates(self.model.get()) if busy else
+            ('サービス既定',) + voice_candidates(self.model.get()))
+
+    def choose_voice(self, _event=None):
+        if not self.running():
+            self.voice_status.set('選択した声を次のホスト起動で使用します。'); return
+        if self.stopping or self.closing: return
+        self.request_id += 1
+        try: self.commands.put_nowait({'id': self.request_id, 'voice': self.voice.get()})
+        except queue.Full:
+            self.voice_status.set('変更待ちが多いため受け付けられません。少し待って選び直してください。'); return
+        self.voice_status.set('声の変更を送信中です。進行中の回答の声は変わりません。')
 
     def start(self):
-        if self.worker is not None and self.worker.is_alive(): return
+        if self.running() or self.closing: return
+        # Finish handling the previous run before resetting the monitor.
+        while True:
+            try: self.handle_event(self.events.get_nowait())
+            except queue.Empty: break
         fixture = self.fixture.get(); key = self.key.get() if not fixture else ''; model = self.model.get()
-        self.key.set(''); self.stop = threading.Event(); self.status.set('起動中…')
-        # The stop button must reference the current event, not the previous run's event.
-        self.stop_button.configure(command=self.stop.set)
+        voice = '' if self.voice.get() == 'サービス既定' else self.voice.get()
+        self.key.set(''); self.stop = threading.Event(); self.commands = queue.Queue(maxsize=32)
+        self.stopping = False; self.failed = False; self.host_ready = False; self.last_seen = None
+        self.status.set('起動中…'); self.host_status.set('ホスト：起動中'); self.session_status.set('会話：待機')
         def run():
             try:
-                service = self.factory(fixture=fixture, key=key, model=model)
-                service.run(self.stop, self.events.put)
+                service = self.factory(fixture=fixture, key=key, model=model, voice=voice)
+                service.run(self.stop, self.events.put, commands=self.commands)
             except Exception: self.events.put({'event': 'failed'})
             finally: self.events.put({'event': 'finished'})
         self.worker = threading.Thread(target=run, daemon=False); self.worker.start(); self.controls()
 
+    def request_stop(self):
+        if not self.running(): return
+        self.stopping = True; self.stop.set(); self.status.set('停止しています…')
+        self.host_status.set('ホスト：停止処理中'); self.controls()
+
+    def log(self, text):
+        # Only fixed labels enter history. Never copy raw event/provider payloads.
+        self.history.configure(state='normal')
+        self.history.insert('end', time.strftime('%H:%M:%S') + ' ' + text + '\n')
+        if int(self.history.index('end-1c').split('.')[0]) > 81: self.history.delete('1.0', '2.0')
+        self.history.see('end'); self.history.configure(state='disabled')
+
+    def handle_event(self, raw):
+        if isinstance(raw, dict) and raw.get('event') == 'finished':
+            self.host_ready = False; self.host_status.set('ホスト：停止中（エラー）' if self.failed else 'ホスト：停止中')
+            self.session_status.set('会話：待機'); return
+        event = public_event(raw)
+        if event is None: return
+        kind = event['event']; text = LABELS[kind]
+        if kind == 'turn-failed': text = FAILURE_LABELS.get(event.get('code'), text)
+        if kind == 'ready':
+            self.host_ready = True
+            if not self.stopping: self.host_status.set('ホスト：待受中')
+        if kind in ('device-online', 'session-busy', 'voice-played'):
+            self.last_seen = self.clock()
+        if kind == 'session-busy': self.session_status.set('会話：質問・回答を処理中')
+        elif kind == 'turn-complete': self.session_status.set('会話：端末へ音声送信中')
+        elif kind == 'voice-played': self.session_status.set('会話：端末の再生完了')
+        elif kind == 'session-idle': self.session_status.set('会話：待機')
+        elif kind == 'turn-failed': self.session_status.set('会話：応答失敗')
+        elif kind == 'failed': self.failed = True
+        elif kind == 'stopped':
+            self.host_ready = False; self.host_status.set('ホスト：停止中')
+        if kind in ('voice-selected', 'voice-failed'):
+            if kind == 'voice-failed' or event.get('id') == self.request_id: self.voice_status.set(text)
+        elif not (kind == 'stopped' and self.failed) and not (self.stopping and kind not in ('stopped', 'failed')):
+            self.status.set(text)
+        self.log(text)
+
+    def update_monitor(self):
+        if not self.host_ready:
+            self.device_status.set('端末：ホスト停止中' if not self.running() else '端末：ホストの待受開始を待っています')
+        elif self.last_seen is None: self.device_status.set('端末：通信待ち（未確認）')
+        else:
+            age = max(0, int(self.clock() - self.last_seen))
+            # Existing terminals cache a successful health check; idle time is not a heartbeat timeout.
+            label = '通信を確認' if age < 30 else '定期通知なし（現在の接続は判定できません）'
+            self.device_status.set(f'端末：{label} / 最終受信 {age}秒前')
+
+    def cancel_pump(self):
+        if self.after_id is not None:
+            self.root.after_cancel(self.after_id); self.after_id = None
+
+    def destroyed(self, event):
+        if event.widget is self.root: self.cancel_pump()
+
     def pump(self):
-        labels = {'ready': '待受中。端末からの接続を受け付けます。', 'device-online': '端末からの接続を確認しました。',
-            'session-busy': '質問・回答を処理しています。', 'session-idle': '待受中。',
-            'turn-failed': '応答に失敗しました。APIキー・利用制限・接続状態を確認してください。',
-            'failed': '起動できませんでした。AP・Node環境・APIキーを確認してください。',
-            'stopped': '停止しました。'}
+        self.cancel_pump()
         while True:
             try: event = self.events.get_nowait()
             except queue.Empty: break
-            if event.get('event') in labels:
-                text = labels[event['event']]
-                if event.get('event') == 'turn-failed':
-                    text = {'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA': 'APIの利用制限に達しました。',
-                        'MODEL': '指定したモデルを利用できません。', 'TIMEOUT': '応答が時間切れになりました。'}.get(event.get('code'), text)
-                self.status.set(text)
-        self.controls()
-        if self.closing and (self.worker is None or not self.worker.is_alive()):
-            self.root.destroy(); return
-        self.root.after(100, self.pump)
+            self.handle_event(event)
+        if not self.running(): self.stopping = False
+        self.update_monitor(); self.controls()
+        if self.closing and not self.running(): self.root.destroy(); return
+        self.after_id = self.root.after(100, self.pump)
 
     def close(self):
-        self.closing = True; self.key.set(''); self.stop.set()
+        self.closing = True; self.key.set(''); self.request_stop(); self.controls()
 
 
 def main():

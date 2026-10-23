@@ -148,7 +148,7 @@ class HostGuiTests(unittest.TestCase):
         try: root = tk.Tk()
         except tk.TclError: self.skipTest('Tk display unavailable')
         root.withdraw(); factory = Mock(); entered = threading.Event()
-        def run(stop, callback): entered.set(); stop.wait(2)
+        def run(stop, callback, **kwargs): entered.set(); stop.wait(2)
         factory.return_value.run.side_effect = run
         try:
             app = HostWindow(root, factory)

@@ -17,7 +17,7 @@ from raspi.host_network import Endpoint, HostError, discover_ap
 
 ROOT = Path(__file__).resolve().parents[1]
 EVENTS = frozenset(('ready', 'failed', 'device-online', 'turn-complete', 'turn-failed',
-    'session-busy', 'session-idle', 'voice-played'))
+    'session-busy', 'session-idle', 'voice-played', 'voice-selected', 'voice-failed'))
 FAILURES = frozenset(('AUTH', 'QUOTA', 'MODEL', 'PERMISSION', 'CONFIG', 'SERVER',
     'TRANSPORT', 'TIMEOUT', 'INVALID_AUDIO', 'EMPTY_AUDIO', 'OUTPUT_LIMIT', 'INTERRUPTED', 'EARLY_CLOSE'))
 
@@ -30,7 +30,17 @@ def public_event(value):
         code = value.get('code'); status = value.get('status')
         if isinstance(code, str) and code in FAILURES: event['code'] = code
         if type(status) is int and 100 <= status <= 599: event['status'] = status
+    if value['event'] == 'voice-selected':
+        request_id = value.get('id')
+        if type(request_id) is not int or not 0 < request_id <= 2**53-1: return None
+        event['id'] = request_id
     return event
+
+
+def voice_candidates(model):
+    # Reuse the same checked-in catalog as the Windows host and Node server.
+    catalog = json.loads((ROOT/'server/voice-catalog.json').read_text(encoding='utf-8'))
+    return tuple(catalog['voices']) if model in catalog['models'] else ()
 
 
 def resolve_node(explicit=None):
@@ -47,23 +57,25 @@ def resolve_node(explicit=None):
     except Exception: raise HostError('NODE_REQUIRED') from None
 
 
-def child_environment(node, fixture, key, model):
+def child_environment(node, fixture, key, model, voice=''):
     env = {'PATH': str(Path(node).parent) + os.pathsep + os.defpath}
     if not fixture:
         if not isinstance(key, str) or not re.fullmatch(r'[\x21-\x7e]{20,256}', key):
             raise HostError('KEY_REQUIRED')
         if not re.fullmatch(r'gemini-[a-z0-9.-]{1,100}', model): raise HostError('MODEL_INVALID')
+        if voice and voice not in voice_candidates(model): raise HostError('VOICE_INVALID')
         env.update(GEMINI_API_KEY=key, GEMINI_MODEL=model)
+        if voice: env['GEMINI_VOICE'] = voice
     return env
 
 
 class HostService:
-    def __init__(self, endpoint, node, *, fixture=True, key='', model='gemini-3.8-live', port=48443):
+    def __init__(self, endpoint, node, *, fixture=True, key='', model='gemini-3.8-live', voice='', port=48443):
         if type(port) is not int or not 1024 <= port <= 65535: raise HostError('PORT_INVALID')
         if endpoint.host == '127.0.0.1' and (not fixture or endpoint.subnet != '127.0.0.1/32'):
             raise HostError('AP_REQUIRED')
         self.endpoint = endpoint; self.node = node; self.fixture = fixture
-        self.key = key; self.model = model; self.port = port; self.child = None; self.reader = None
+        self.key = key; self.model = model; self.voice = voice; self.port = port; self.child = None; self.reader = None
 
     def _stop(self):
         child = self.child
@@ -90,13 +102,13 @@ class HostService:
                 if stream is not None: stream.close()
             self.key = ''
 
-    def run(self, stop, on_event, duration=None):
+    def run(self, stop, on_event, duration=None, *, commands=None):
         if duration is not None and (type(duration) not in (int, float) or not 0 < duration <= 3600):
             raise HostError('DURATION_INVALID')
         events = queue.Queue(maxsize=64)
         try:
             if stop.is_set(): return 0
-            env = child_environment(self.node, self.fixture, self.key, self.model)
+            env = child_environment(self.node, self.fixture, self.key, self.model, self.voice)
             self.child = subprocess.Popen([str(self.node), str(ROOT/'server/dist/wireless-host.js')],
                 cwd=ROOT/'server', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL, text=True, start_new_session=True)
@@ -122,6 +134,17 @@ class HostService:
                 if self.child.poll() is not None: raise HostError('HOST_EXITED')
                 if not ready and time.monotonic()-started > 8: raise HostError('HOST_START_TIMEOUT')
                 if ready and duration is not None and time.monotonic()-started >= duration: break
+                if ready and commands is not None:
+                    try: command = commands.get_nowait()
+                    except queue.Empty: command = None
+                    if command is not None:
+                        request_id = command.get('id') if isinstance(command, dict) else None
+                        voice = command.get('voice') if isinstance(command, dict) else None
+                        if (not self.fixture and type(request_id) is int and 0 < request_id <= 2**53-1
+                                and voice in voice_candidates(self.model)):
+                            self.child.stdin.write(json.dumps({'type': 'voice', 'id': request_id, 'voice': voice})+'\n')
+                            self.child.stdin.flush()
+                        else: on_event({'event': 'voice-failed'})
                 try: event = events.get(timeout=.1)
                 except queue.Empty: continue
                 if event['event'] == 'failed': raise HostError('HOST_START_FAILED')
@@ -134,8 +157,8 @@ class HostService:
             self._stop(); on_event({'event': 'stopped'})
 
 
-def make_service(*, fixture, key='', model='gemini-3.8-live', node=None, interface='wlan0', port=48443):
-    return HostService(discover_ap(interface), resolve_node(node), fixture=fixture, key=key, model=model, port=port)
+def make_service(*, fixture, key='', model='gemini-3.8-live', voice='', node=None, interface='wlan0', port=48443):
+    return HostService(discover_ap(interface), resolve_node(node), fixture=fixture, key=key, model=model, voice=voice, port=port)
 
 
 def main():
@@ -146,6 +169,7 @@ def main():
     modes.add_argument('--gui', action='store_true')
     parser.add_argument('--node'); parser.add_argument('--interface', default='wlan0')
     parser.add_argument('--model', default='gemini-3.8-live'); parser.add_argument('--port', type=int, default=48443)
+    parser.add_argument('--voice', default='', help='声カタログの声名（省略時はサービス既定）')
     parser.add_argument('--duration', type=float)
     args = parser.parse_args()
     if args.gui:
@@ -156,7 +180,7 @@ def main():
     try:
         if args.live and not sys.stdin.isatty(): raise HostError('INTERACTIVE_KEY_REQUIRED')
         key = getpass.getpass('Gemini API key（今回のみ使用）: ') if args.live else ''
-        service = make_service(fixture=args.fixture, key=key, model=args.model, node=args.node,
+        service = make_service(fixture=args.fixture, key=key, model=args.model, voice=args.voice, node=args.node,
             interface=args.interface, port=args.port)
         key = ''
         prior = {sig: signal.signal(sig, lambda *_: stop.set()) for sig in (signal.SIGTERM, signal.SIGINT)}

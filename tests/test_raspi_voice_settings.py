@@ -88,6 +88,7 @@ class VoiceSettingsTests(unittest.TestCase):
             service = Mock(); service.run.return_value = 0
             with patch('sys.argv', ['host', '--live']+extra), patch('sys.stdin.isatty', return_value=True), \
                  patch('raspi.host.getpass.getpass', return_value='fixture-session-key-long-enough'), \
+                 patch('raspi.key_store.KeyStore.load', return_value='fixture-session-key-long-enough'), \
                  patch('raspi.voice_settings.settings_path', return_value=self.path), \
                  patch('raspi.host.make_service', return_value=service) as factory:
                 self.assertEqual(main(), 0)

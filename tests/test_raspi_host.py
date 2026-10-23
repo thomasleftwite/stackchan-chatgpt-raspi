@@ -106,11 +106,13 @@ class HostUnitTests(unittest.TestCase):
 
     def test_key_prompt_can_be_cancelled_before_starting_service(self):
         with patch('sys.argv', ['host', '--live']), patch('raspi.host.getpass.getpass', side_effect=KeyboardInterrupt), \
+             patch('raspi.key_store.KeyStore.load', return_value=''), \
              patch('sys.stdin.isatty', return_value=True), patch('raspi.host.make_service') as factory:
             self.assertEqual(main(), 130); factory.assert_not_called()
 
     def test_live_refuses_non_terminal_key_input(self):
         with patch('sys.argv', ['host', '--live']), patch('sys.stdin.isatty', return_value=False), \
+             patch('raspi.key_store.KeyStore.load', return_value=''), \
              patch('raspi.host.getpass.getpass') as prompt, patch('sys.stdout', new_callable=io.StringIO):
             self.assertEqual(main(), 1); prompt.assert_not_called()
 
@@ -154,6 +156,7 @@ class HostGuiTests(unittest.TestCase):
         try:
             from raspi.voice_settings import VoiceSettings
             temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+            self.enterContext(patch.dict(os.environ, XDG_CONFIG_HOME=temp.name, XDG_DATA_HOME=temp.name+'/data'))
             app = HostWindow(root, factory, settings=VoiceSettings(Path(temp.name)/'voice-settings.json'))
             self.assertTrue(app.fixture.get())
             app.fixture.set(False); app.key.set('fixture-session-key-long-enough'); app.start()

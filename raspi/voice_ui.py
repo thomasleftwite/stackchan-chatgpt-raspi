@@ -41,7 +41,7 @@ class VoiceUi:
             if event.widget is dialog and self.review_dialog is dialog: self.review_dialog = None
         dialog.bind('<Destroy>', destroyed, add='+')
         frame = ttk.Frame(dialog, padding=18); frame.pack(fill='both', expand=True)
-        ttk.Label(frame, text='Gemini APIキー（アプリ終了まで保持、ファイル保存なし）').pack(anchor='w')
+        ttk.Label(frame, text='Gemini APIキー（メイン画面と共有・試聴開始時に暗号化保存）').pack(anchor='w')
         self.preview_key_box = ttk.Entry(frame, textvariable=self.key, show='●')
         self.preview_key_box.pack(fill='x', pady=(4, 8))
         ttk.Label(frame, text='試聴先').pack(anchor='w')
@@ -81,6 +81,8 @@ class VoiceUi:
         key = self.key.get().strip()
         if not key:
             self.preview_status.set('この画面の非表示欄へAPIキーを入力してください。'); return
+        if not self.save_key():
+            self.preview_status.set('APIキーを保存できません。メイン画面の案内を確認してください。'); return
         self.preview_cancel = threading.Event(); self.preview_id += 1
         job = (self.preview_id, model, voice, target); self.preview_job = job
         self.preview_service_stop = threading.Event()

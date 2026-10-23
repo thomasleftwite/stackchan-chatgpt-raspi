@@ -7,7 +7,7 @@ import tempfile
 import threading
 import unittest
 import os
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from raspi.host import HostService, ROOT, public_event, resolve_node, child_environment
 from raspi.host_network import Endpoint, HostError
@@ -60,6 +60,7 @@ class DeviceGuiTests(unittest.TestCase):
         except tk.TclError: self.skipTest('Tk display unavailable')
         self.root.withdraw(); self.addCleanup(self.root.destroy)
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        self.enterContext(patch.dict(os.environ, XDG_CONFIG_HOME=temp.name, XDG_DATA_HOME=temp.name+'/data'))
         self.factory = Mock(); self.generator = Mock(); self.player = Mock()
         self.app = HostWindow(self.root,settings=VoiceSettings(Path(temp.name)/'voice-settings.json'),
             generator=self.generator,player=self.player,device_factory=self.factory)

@@ -4,7 +4,7 @@
 
 - Raspberry Pi 5、Debian 13 (trixie)、aarch64。
 - VS Code 1.134.0 ARM64、Codex拡張 `openai.chatgpt@26.1007.21434`、Codex CLI `0.163.0` は会話中の報告で確認済み。
-- Piのnode/npm、GitHub新規repoの存在、Pi上のテスト実行は未確認。
+- 2026-10-23: GitHub repoとorigin同期を確認。Debian 13.6 / aarch64、Python 3.13.5、Git 2.47.3。Node/npmは未導入。
 
 ## 新規リポジトリが作成された後
 
@@ -17,6 +17,16 @@ code .
 ```
 
 ## 最初の確認
+
+依存のインストールやOS設定の変更を行わない診断：
+
+```bash
+python3 scripts/check_environment.py
+python3 -m unittest discover -s tests -v
+```
+
+診断はPython/Git/Node/npmを確認し、Node >=22.9.0を要求する。終了コード0はランタイムの前提充足、1は不足または確認失敗。ハードウェア・ホスト動作の検証は別途必要。
+
 
 ```bash
 uname -m

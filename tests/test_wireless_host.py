@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import tempfile
 import sys
@@ -30,12 +31,24 @@ class WirelessHostTests(unittest.TestCase):
   self.assertEqual(normalize_code('12345678 90ABCDEF\n12345678 90ABCDEF'),'1234567890abcdef1234567890abcdef')
   for code in ('12345678','x'*32,'g'*32,'a'*33):
    with self.assertRaises(ValueError):normalize_code(code)
+ @unittest.skipUnless(os.name=='nt','DPAPI pairing protection requires Windows')
  def test_pairing_is_persistent_encrypted_and_corruption_fails_closed(self):
   with self.folder() as folder:
    path=Path(folder)/'pairing.json';code='1234567890abcdef1234567890abcdef'
    save_pairing(path,code);self.assertNotIn(code,path.read_text());self.assertEqual(load_pairing(path),code)
    data=json.loads(path.read_text());data['protectedDeviceKey']='AAAA';path.write_text(json.dumps(data))
    with self.assertRaises(Exception):load_pairing(path)
+ @unittest.skipIf(os.name=='nt','Unsupported-platform contract requires non-Windows')
+ def test_pairing_requires_windows_without_writing_credentials(self):
+  with self.folder() as folder, patch('settings.ctypes.WinDLL',create=True,side_effect=AssertionError('Windows API must not load')):
+   path=Path(folder)/'pairing.json';code='1234567890abcdef1234567890abcdef'
+   with self.assertRaisesRegex(RuntimeError,'^WINDOWS_REQUIRED$'):save_pairing(path,code)
+   self.assertFalse(path.exists());self.assertFalse(path.with_suffix('.new').exists())
+   previous=b'{"version":1,"protectedDeviceKey":"Zml4dHVyZS1vbmx5"}'
+   path.write_bytes(previous)
+   with self.assertRaisesRegex(RuntimeError,'^WINDOWS_REQUIRED$'):save_pairing(path,code)
+   self.assertEqual(path.read_bytes(),previous);self.assertFalse(path.with_suffix('.new').exists())
+   with self.assertRaisesRegex(RuntimeError,'^WINDOWS_REQUIRED$'):load_pairing(path)
  def test_stable_runtime_repairs_modified_executable(self):
   with self.folder() as folder:
    root=Path(folder);source=root/'bundle';source.mkdir();(source/'node.exe').write_bytes(b'fixture-runtime')

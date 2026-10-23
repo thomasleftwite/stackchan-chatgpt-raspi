@@ -242,5 +242,16 @@
       "path": "tools/run_lan_probe.py",
       "sha256": "59a38ecfdcf8e5a9a01938e5423a914a99b9519ae23fb2f91c70a98a94672dd6"
     }
+  ],
+  "hash_scope": "sha256 records original bytes at the pinned upstream commit; local test changes are listed separately.",
+  "local_modifications": [
+    {
+      "path": "tests/test_voice_features.py",
+      "reason": "Separate portable PCM validation from Windows-only cancellation; test non-Windows rejection."
+    },
+    {
+      "path": "tests/test_wireless_host.py",
+      "reason": "Limit DPAPI roundtrip to Windows; test non-Windows rejection without credential writes."
+    }
   ]
 }

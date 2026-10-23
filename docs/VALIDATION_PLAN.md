@@ -77,3 +77,15 @@
 - `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" python3 scripts/check_environment.py`: 終了コード0、ランタイム前提PASS。ホスト/実機動作の合格判定ではない。
 - 移管したPythonファイルの構文確認、60ファイルのハッシュ再照合、既知秘密形式の再検査、ファーム/dataパス不在、ランタイムのGit除外を確認。`git diff --check` 成功。差分を自己レビューし、取り込んだコードとテストが固定SHAから未変更であることを確認。
 - Windows実環境、wireless-hostの正常起動・停止、AP・実機・実音声・外部APIは未検証。公開待受・OS設定変更・端末書込み・Gemini API呼び出しは行っていない。
+
+## 2026-10-23 Pythonエラー解析・テストOS条件修正
+
+- 開始HEAD: `efc2078`、PR #2の `feat/import-upstream-host` branch。作業ツリーはクリーン。
+- 再現: `PYTHONPATH=tests python3 -m unittest -v test_voice_features.VoiceFeatureTest.test_preview_rejects_non_pcm_and_cancelled_playback_does_not_open_audio test_wireless_host.WirelessHostTests.test_pairing_is_persistent_encrypted_and_corruption_fails_closed`。対象2件ともエラー（`PC_AUDIO` / `WINDOWS_REQUIRED`）。
+- 仮説を切り分け: 実装と対象テストは上流ハッシュ一致。Linuxでは取消フラグの有無によらずWindows用再生を拒否。DPAPI保存も拒否しファイルを書き込まない。原因は移管の破損や再生取消の回帰ではなく、上流のWindows専用テストにOS条件が不足していたこと。
+- 修正: PCMデコード検証を共通テストへ分離。Windows再生取消・DPAPI往復には `skipUnless(os.name=='nt', ...)` を付与。非WindowsではWindows DLLへ到達せず拒否することを確認し、ペアリング保存失敗で新規ファイル/一時ファイルを作らず、既存ファイルも変更しないことを追加検証。
+- 修正した対象5テストの実行: 3成功・2スキップ、終了コード0。
+- `python3 -m unittest discover -s tests -v`（GUI表示への接続が可能な制限外環境）: 56件中52成功・Windows専用4件スキップ、エラー/失敗0、終了コード0。
+- アプリ/Node/依存/端末ファームに変更なし。58ファイルの上流ハッシュ一致を再確認し、変更したテスト2ファイルは `UPSTREAM_FILES.json` の `local_modifications` に記録。sha256は移管元の値を保持。
+- `git diff --check` 成功。自己レビューで共通PCM検証が実行され、Windows専用テストの元の検証内容が維持されることを確認。Windows実環境のテストは未実施。GUI表示接続不可の隔離環境では既存GUIテスト3件の実行に引き続き制限がある。
+- Nodeコード・依存が変わらないためNode 37件と自己診断は直前の実測を参照し、今回は再実行していない。実API・実機・実音声の試験も行っていない。

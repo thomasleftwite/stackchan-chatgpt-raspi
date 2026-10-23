@@ -77,7 +77,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 Python依存を入れる場合はOS標準環境を汚さず、venvを使用する。Nodeバージョンは `server/package.json` の要件を確認する。
 
-今回のPiではTkinterとpyserialが既存環境で利用可能だった。追加インストールは行っていない。GUIテストには表示先への接続が必要。Linuxでは上流のWindows音声/DPAPIに依存する2件がエラー、別のDPAPIテスト2件はスキップとなるため、現時点の全Pythonテストは合格していない。Windows版の実行結果とは区別する。
+今回のPiではTkinterとpyserialが既存環境で利用可能だった。追加インストールは行っていない。GUIテストには表示先への接続が必要。Windows音声/DPAPI専用テストはLinuxでは計4件をスキップし、共通PCM検証と非Windows環境での安全な拒否を別途検証する。修正後のPiで56件中52成功・4スキップ。表示先に接続できない隔離環境ではGUIテスト3件が別途エラーとなる。Windows版の実行結果やLinux用ホスト実装の完成とは区別する。
 
 ## AP構築時の注意
 

@@ -1,12 +1,14 @@
 """Voice admission, persisted selection, and local preview contracts. API0/USB0."""
 import base64
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import threading
 import tkinter as tk
 import unittest
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'desktop'))
 from voices import VoiceReviews
 from settings import save_voice_setting
@@ -49,11 +51,25 @@ class VoiceFeatureTest(unittest.TestCase):
             p=Path(folder)/'s.json'
             with self.assertRaises(ValueError):save_voice_setting(p,'../../secret')
             self.assertFalse(p.exists())
-    def test_preview_rejects_non_pcm_and_cancelled_playback_does_not_open_audio(self):
+    def test_preview_rejects_non_pcm(self):
         self.assertEqual(decode_audio({'pcm':base64.b64encode(b'\x01\x00').decode()}),bytearray(b'\x01\x00'))
         for value in ('!!!!',base64.b64encode(b'x').decode(),''):
             with self.assertRaises(ValueError):decode_audio({'pcm':value})
-        stop=threading.Event();stop.set();self.assertFalse(play_pcm(bytearray(8),stop))
+    @unittest.skipUnless(os.name=='nt','Windows waveOut playback requires Windows')
+    def test_cancelled_playback_does_not_open_audio(self):
+        stop=threading.Event();stop.set()
+        with patch('voice_preview.ctypes.WinDLL',side_effect=AssertionError('Audio device must not open')):
+            self.assertFalse(play_pcm(bytearray(8),stop))
+
+    @unittest.skipIf(os.name=='nt','Unsupported-platform contract requires non-Windows')
+    def test_windows_playback_is_rejected_on_other_platforms(self):
+        with patch('voice_preview.ctypes.WinDLL',create=True,side_effect=AssertionError('Windows API must not load')):
+            for cancelled in (False,True):
+                with self.subTest(cancelled=cancelled):
+                    stop=threading.Event()
+                    if cancelled:stop.set()
+                    with self.assertRaisesRegex(ValueError,'^PC_AUDIO$'):
+                        play_pcm(bytearray(8),stop)
     def test_runtime_api_default_does_not_inherit_voice(self):
         import os
         from unittest.mock import patch

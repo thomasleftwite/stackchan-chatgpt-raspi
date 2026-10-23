@@ -21,7 +21,7 @@
 
 - [x] Node.js >=22.9.0 をARM64に用意（公式22.23.4 / npm 10.9.9、Git除外の `.runtime/` に配置、SHA256照合済み）
 - [x] `server` で `npm ci --ignore-scripts` と `npm test` を実行（固定依存116パッケージ、TypeScript buildとNode 37件成功）
-- [ ] Linux用Pythonテスト実行方針を整備（現状53件: 49成功・2エラー・2スキップ。Windows専用エラー2件は上流でも再現）
+- [x] Linux用PythonテストのOS条件を整備（56件: 52成功・Windows専用4件スキップ。非Windowsでの安全な拒否も検証。GUI試験には表示接続が必要）
 - [ ] `wireless-host.ts` のfixtureと起動・停止を確認
 - [ ] HTTP/WSプロトコル、音声PCMの回帰テストを追加
 - [ ] WindowsとLinuxの両環境でテスト可能なCIを検討

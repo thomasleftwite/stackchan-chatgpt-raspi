@@ -26,12 +26,13 @@
 
 ## 移管結果
 
-- 許可リストと各ファイルのSHA256: `UPSTREAM_FILES.json`。LICENSE、server 39ファイル、desktop 10ファイル、Pythonテスト5ファイル、補助スクリプト2ファイル、通信/声仕様3ファイルの計60ファイル。すべて固定SHAとバイト一致。
+- 許可リストと移管時の各ファイルのSHA256: `UPSTREAM_FILES.json`。LICENSE、server 39ファイル、desktop 10ファイル、Pythonテスト5ファイル、補助スクリプト2ファイル、通信/声仕様3ファイルの計60ファイル。移管時はすべて固定SHAとバイト一致。
 - 補助スクリプトはPythonテストとWindows配布処理が参照する `tools/run_gemini_device.py` と `tools/run_lan_probe.py` のみ。端末操作機能は実行していない。
 - `server/.env.example` は内容を確認し、キー・トークン・接続先URLが空のサンプルとして例外的に移管。実際の `.env`、data、音声、登録特徴、個人設定、ファーム、配布物は対象外。
 - 既知のGoogle/GitHubトークン形式と秘密鍵ヘッダーを全移管ファイルに照合し0件。固定のテスト用ダミー値は保持。これはあらゆる秘密値の不存在を数学的に保証する検査ではない。
-- 依存定義・lockfile・上流テストを変更せず、Node 37件成功。オフライン自己診断も成功（API呼び出し0）。
+- 依存定義・lockfile・Nodeテストを変更せず、Node 37件成功。オフライン自己診断も成功（API呼び出し0）。
+- 移管後の変更: `tests/test_voice_features.py` と `tests/test_wireless_host.py` のWindows専用テストにOS条件を付け、PCM検証を共通テストへ分離。非WindowsではWindows APIへの到達拒否とペアリング保存失敗時のファイル保全を検証する。アプリ実装は未変更。他の58ファイルは固定SHAと一致。マニフェストのsha256は移管元の基準を保持し、`local_modifications` に差分対象を記録する。
 
 ## 現状の制約
 
-Windows版のコードを保持した段階で、Linux用GUI/秘密保存/音声処理は未実装。PythonのWindows専用2件はLinuxでエラーとなり、DPAPIの別2件はスキップされる。上流固定SHAでも同じ2件のエラーを確認した。Windowsでの回帰実測、wireless-hostプロセスの正常起動・停止、AP・実機・外部APIの試験は未実施。
+Windows版のコードを保持した段階で、Linux用GUI/秘密保存/音声処理は未実装。上流で再現したPythonの2エラーはWindows専用テストのOS条件漏れだった。修正後はPiで56件中52成功・4スキップ。これはLinux用ホスト機能の完成を意味しない。Windowsでの回帰実測、wireless-hostプロセスの正常起動・停止、AP・実機・外部APIの試験は未実施。

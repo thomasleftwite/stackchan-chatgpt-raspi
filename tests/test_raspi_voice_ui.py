@@ -27,7 +27,7 @@ class VoiceGuiTests(unittest.TestCase):
         self.generator = Mock(return_value=self.pcm); self.player = Mock(return_value=True)
         self.factory = Mock()
         self.app = HostWindow(self.root, self.factory, settings=self.store, generator=self.generator, player=self.player)
-        self.app.fixture.set(False); self.app.controls()
+        self.app.fixture.set(False); self.app.preview_target.set('Pi（ローカル）'); self.app.controls()
         self.addCleanup(self.shutdown)
 
     def shutdown(self):

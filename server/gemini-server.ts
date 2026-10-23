@@ -17,6 +17,7 @@ export interface GeminiServerOptions {
   onSessionState?:(active:boolean)=>void;
   onBusy?:()=>void;
   onPlayed?:()=>void;
+  onDisconnect?:()=>void;
 }
 
 function hotspotBoundary(subnet: string): BlockList {
@@ -100,7 +101,7 @@ export function createGeminiServer(options: GeminiServerOptions) {
     }, 100);
     timer.unref();
     ws.on('error', () => stop(1011, 'Transport failure'));
-    ws.on('close', () => { phase = 'closed'; clearInterval(timer); clearTimeout(hardClose); clearAudio();if(!busy)options.onSessionState?.(false); });
+    ws.on('close', () => { phase = 'closed'; clearInterval(timer); clearTimeout(hardClose); clearAudio();options.onDisconnect?.();if(!busy)options.onSessionState?.(false); });
     ws.on('message', (raw, binary) => {
       if (phase === 'closed') return;
       const packet = Array.isArray(raw) ? Buffer.concat(raw) : Buffer.isBuffer(raw) ? raw : Buffer.from(raw);

@@ -17,7 +17,8 @@ from raspi.host_network import Endpoint, HostError, discover_ap
 
 ROOT = Path(__file__).resolve().parents[1]
 EVENTS = frozenset(('ready', 'failed', 'device-online', 'turn-complete', 'turn-failed',
-    'session-busy', 'session-idle', 'voice-played', 'voice-selected', 'voice-failed'))
+    'session-busy', 'session-idle', 'voice-played', 'voice-selected', 'voice-failed', 'preview-generating',
+    'preview-output', 'preview-played', 'preview-failed'))
 FAILURES = frozenset(('AUTH', 'QUOTA', 'MODEL', 'PERMISSION', 'CONFIG', 'SERVER',
     'TRANSPORT', 'TIMEOUT', 'INVALID_AUDIO', 'EMPTY_AUDIO', 'OUTPUT_LIMIT', 'INTERRUPTED', 'EARLY_CLOSE'))
 
@@ -26,11 +27,11 @@ def public_event(value):
     if not isinstance(value, dict) or not isinstance(value.get('event'), str) or value['event'] not in EVENTS:
         return None
     event = {'event': value['event']}
-    if value['event'] == 'turn-failed':
+    if value['event'] in ('turn-failed', 'preview-failed'):
         code = value.get('code'); status = value.get('status')
         if isinstance(code, str) and code in FAILURES: event['code'] = code
         if type(status) is int and 100 <= status <= 599: event['status'] = status
-    if value['event'] == 'voice-selected':
+    if value['event'] in ('voice-selected', 'preview-generating', 'preview-output', 'preview-played', 'preview-failed'):
         request_id = value.get('id')
         if type(request_id) is not int or not 0 < request_id <= 2**53-1: return None
         event['id'] = request_id
@@ -70,10 +71,13 @@ def child_environment(node, fixture, key, model, voice=''):
 
 
 class HostService:
-    def __init__(self, endpoint, node, *, fixture=True, key='', model='gemini-3.8-live', voice='', port=48443):
+    def __init__(self, endpoint, node, *, fixture=True, key='', model='gemini-3.8-live', voice='', port=48443, preview_id=None):
         if type(port) is not int or not 1024 <= port <= 65535: raise HostError('PORT_INVALID')
         if endpoint.host == '127.0.0.1' and (not fixture or endpoint.subnet != '127.0.0.1/32'):
             raise HostError('AP_REQUIRED')
+        if preview_id is not None and (type(preview_id) is not int or not 0 < preview_id <= 2**53-1):
+            raise HostError('PREVIEW_ID_INVALID')
+        self.preview_id = preview_id
         self.endpoint = endpoint; self.node = node; self.fixture = fixture
         self.key = key; self.model = model; self.voice = voice; self.port = port; self.child = None; self.reader = None
 
@@ -109,7 +113,8 @@ class HostService:
         try:
             if stop.is_set(): return 0
             env = child_environment(self.node, self.fixture, self.key, self.model, self.voice)
-            self.child = subprocess.Popen([str(self.node), str(ROOT/'server/dist/wireless-host.js')],
+            entry = 'device-preview-host.js' if self.preview_id is not None else 'wireless-host.js'
+            self.child = subprocess.Popen([str(self.node), str(ROOT/'server/dist'/entry)],
                 cwd=ROOT/'server', env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL, text=True, start_new_session=True)
             def read():
@@ -126,8 +131,10 @@ class HostService:
                         except queue.Full: pass
                     except (ValueError, TypeError): pass
             self.reader = threading.Thread(target=read, daemon=True); self.reader.start()
-            self.child.stdin.write(json.dumps({'host': self.endpoint.host, 'port': self.port,
-                'subnet': self.endpoint.subnet, 'fixture': self.fixture})+'\n')
+            config = {'host': self.endpoint.host, 'port': self.port,
+                'subnet': self.endpoint.subnet, 'fixture': self.fixture}
+            if self.preview_id is not None: config['id'] = self.preview_id
+            self.child.stdin.write(json.dumps(config)+'\n')
             self.child.stdin.flush()
             started = time.monotonic(); ready = False
             while not stop.is_set():
@@ -159,6 +166,11 @@ class HostService:
 
 def make_service(*, fixture, key='', model='gemini-3.8-live', voice='', node=None, interface='wlan0', port=48443):
     return HostService(discover_ap(interface), resolve_node(node), fixture=fixture, key=key, model=model, voice=voice, port=port)
+
+
+def make_device_preview_service(*, key, model, voice, request_id):
+    return HostService(discover_ap(), resolve_node(), fixture=False, key=key, model=model,
+        voice=voice, preview_id=request_id)
 
 
 def main():

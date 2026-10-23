@@ -12,7 +12,8 @@ from raspi.host import ROOT, child_environment, resolve_node, voice_candidates
 
 MAX_PCM = 480000
 FAILURES = frozenset(('AUTH', 'QUOTA', 'MODEL', 'CONFIG', 'PERMISSION', 'TIMEOUT',
-    'EMPTY_AUDIO', 'OUTPUT_LIMIT', 'TRANSPORT', 'INVALID_AUDIO', 'CANCELLED', 'PC_AUDIO'))
+    'EMPTY_AUDIO', 'OUTPUT_LIMIT', 'TRANSPORT', 'INVALID_AUDIO', 'CANCELLED', 'PC_AUDIO',
+    'INTERRUPTED', 'EARLY_CLOSE', 'SERVER'))
 
 
 def decode_audio(event, request_id):

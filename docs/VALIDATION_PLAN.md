@@ -263,3 +263,16 @@
 - 旧実装が2回目の試聴にキーを維持しない失敗を既存GUI試験へ組込み再現し、修正後に連続2回の試聴、ホスト再開始、非表示欄の共有、明示消去/終了消去を確認。`python3 -m unittest discover -s tests -v`: 119件中115成功・Windows専用4件スキップ、終了コード0。試験はダミー生成器・既存fixtureであり、実APIは呼び出していない。
 - 現行RasPi版はPiのaplayを使用し、Windows版はWindows waveOutを使用することをコードから確認。Connectの一次資料を調査し、ターミナル/画面共有はWindowsへの音声転送経路でないと整理。Piの音声出力を使う手順、既存Windowsアプリを直接試聴に使う手順、未実装のloopback Web/SSH転送案を[REMOTE_AUDIO.md](REMOTE_AUDIO.md)へ記録した。
 - APIキーのディスク永続保護、Pi版のWindowsブラウザー音声再生は未実装。Windows機での実測、物理側の聴感、採用保存は未確認。Windows/SSH/Connect/音声出力の実機設定変更は行っていない。
+
+## 2026-10-23 端末スピーカーでの声試聴
+
+- 開始HEAD: `c7f8f70`、作業branch: `feat/device-voice-preview`（声管理PR #8を土台とする）。利用者から「raspiでの音声再生は利用できません。端末側で試聴できるように」と指定され、PROJECT_SPEC FR-05と受入条件を更新。端末ファームの変更なしで実装した。
+- `server/device-preview.ts`と`device-preview-host.ts`を追加。既存HTTP/WS v2の端末起点の録音操作を試聴開始の合図にする。録音PCMを直ちに消去し、既存VoiceControl.previewの固定テキストだけをAPIへ渡す。端末からのplayed通知とセッション終了後に専用ホストを停止・回収。サーバーから端末を起こす新命令は追加していない。
+- AP側だけの待受を通常ホストと専用試聴で共通化するため、既存の境界検証をhost-boundary.tsへ抽出。localhostは明示fixture true/127.0.0.1/32だけ許可し、上流LANへの公開や実機設定変更を行わない。
+- 生成中の切断を即座に扱うため、既存gemini-serverへ任意のonDisconnectを追加。通常会話のbusy/idle解除の挙動は維持し、専用試聴だけが切断時に生成ワーカーを中断する。録音をAPIへ渡さないこと、遅延PCMの消去、再生完了前の切断に成功を付けないことを試験。
+- Pythonは専用Nodeエントリの選択、request IDと固定イベントだけの受信、GUI既定「端末」、状態案内、通常ホストとの排他、ユーザー中断、再生完了後だけ採用可能となる処理を追加。Piローカル試聴は任意の補助経路として保持。キーのアプリ起動中の再利用と明示消去は維持。
+- `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" npm --prefix server run build`: 成功。`.runtime/node-v22.23.4-linux-arm64/bin/node --test --test-timeout=10000 server/dist/test/*.test.js`: 最終54件成功、失敗/スキップ0、終了コード0。新規7件は固定文/入力破棄、遅延PCM中断、失敗分類、実WS生成中切断、実fixture再生完了/単発、出力中断/ポート再利用、不正境界/IDを確認。
+- `python3 -m unittest discover -s tests -v`: 最終124件中120成功・Windows専用4件スキップ、終了コード0。追加5件で公開イベントの秘密除外、実Node子/合成端末、Tkの端末既定/再生確認/中断/排他を確認。`py_compile`と`git diff --check`成功。API不要の試験では実端末と音声デバイスを使用しない。
+- 実機: 利用者のローカルキー入力と明示的な準備・端末操作で、waiting→generating→output→preview_finished trueを2回観測。採用保存とファイル再読込のbooleanも2回成功。利用者が「端末から聞こえ、採用して保存できた」と確認した。実機の音声成功はonDisconnect追加前、追加後は実WS切断を含むAPI不要の全回帰で確認した。
+- 実機試験後の専用device-preview-host残存0件を実画面側の/procで確認。キー・実音声・質問内容・選択された声はログ/PR/Gitへ含めず、試聴用録音をAPIへ送信しない。
+- 未検証: 120秒の実時間待機による期限切れ、Windows実環境、実Wi-Fi断/電源断、アプリ実再起動での保存選択の利用者画面確認。保存後の再読込と一時設定でのGUI再起動回帰とは区別する。

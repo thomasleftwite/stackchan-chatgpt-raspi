@@ -2,7 +2,7 @@
 
 更新: 2026-10-23。未チェックは未実施。優先度 P0 > P1 > P2 > P3。
 
-現在の到達点: 上流ホスト移管、有線上流・Wi-Fi AP、Piアプリからの端末Wi-Fi設定、端末再起動後のホスト到達まで確認済み。実会話用Linuxホストと実API会話は未完了。[進捗整理](docs/PROGRESS.md)。
+現在の到達点: 上流ホスト移管、有線上流・Wi-Fi AP、Piアプリからの端末Wi-Fi設定、端末再起動後のホスト到達まで確認済み。次工程としてLinux用ホストの基本CLI/GUIを追加し、fixtureで検証。実API会話は未検証。[進捗整理](docs/PROGRESS.md)。
 
 ## P0 リポジトリ・環境
 
@@ -23,7 +23,7 @@
 
 - [x] Node.js >=22.9.0 をARM64に用意（公式22.23.4 / npm 10.9.9、Git除外の `.runtime/` に配置、SHA256照合済み）
 - [x] `server` で `npm ci --ignore-scripts` と `npm test` を実行（固定依存116パッケージ、TypeScript buildとNode 42件成功）
-- [x] Linux用PythonテストのOS条件を整備（Piアプリ試験込み73件: 69成功・Windows専用4件スキップ。GUI試験には表示接続が必要）
+- [x] Linux用PythonテストのOS条件を整備（ホストCLI/GUI試験込み88件: 84成功・Windows専用4件スキップ。GUI試験には表示接続が必要）
 - [x] `wireless-host.ts` のfixtureと起動・停止を確認（EOF/SIGTERM/SIGINT・再起動・ポート解放、端末/AP経由のhealth到達も確認）
 - [x] HTTP/WSプロトコル、音声PCMの回帰テストを追加（実プロセスのfixture試験5件追加、Node計42件成功）
 - [ ] WindowsとLinuxの両環境でテスト可能なCIを検討
@@ -31,14 +31,14 @@
 ## P2 Pythonホスト移植
 
 - [x] Piアプリから端末WiFiManagerへ接続先を設定し、Pi APへ復帰（`python3 -m raspi.provision --gui`、実機保存・再接続成功）
-- [ ] `raspi/` の構成とCLIエントリポイントを設計
-- [ ] PowerShell依存のホットスポット検出をLinuxへ置換
-- [ ] `node.exe` 起動をLinux `node` 起動へ置換
+- [x] `raspi/` の構成とCLIエントリポイントを設計（`raspi.host` のCLI/基本GUI、`raspi.provision` の端末設定）
+- [x] PowerShell依存のホットスポット検出をLinuxへ置換（NetworkManagerのAP/sharedと実IPv4を読み取り検証）
+- [x] `node.exe` 起動をLinux `node` 起動へ置換（プロジェクト用ARM64 Nodeまたは明示パス）
 - [ ] Linuxの設定保存先と秘密保護方式を決定
 - [ ] GUI/Tkinterのフォント・表示・文言を調整
 - [ ] 24kHz PCMの再生/中断を実装し、音声デバイス未接続時も安全に失敗
 - [ ] 声の試聴/採用/保存、Geminiキー管理をテスト
-- [ ] 停止・SIGTERM・子プロセス回収をテスト
+- [x] 停止・SIGTERM・子プロセス回収をテスト（実APのfixture、親CLI SIGTERM、同一ポート再利用、強制回収の単体試験。実API中断は未検証）
 
 ## P3 ネットワーク
 

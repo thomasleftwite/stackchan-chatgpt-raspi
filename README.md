@@ -18,6 +18,7 @@
 - [Raspberry Pi開発環境と引継ぎ](docs/RASPI_DEV_SETUP.md)
 - [有線上流・端末APと復旧](docs/NETWORK_AP_SETUP.md)
 - [Piアプリから端末Wi-Fiを設定](raspi/README.md)
+- [PiホストCLI/GUIの起動](raspi/README.md#会話ホストの起動停止)
 - [上流基準と移管記録](docs/UPSTREAM_IMPORT.md)
 - [開発エージェント指示](AGENTS.md)
 

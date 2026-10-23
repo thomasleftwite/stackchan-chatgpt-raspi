@@ -68,6 +68,8 @@ node dist/host-self-check.js
 
 Nodeテストと自己診断はループバック通信とfixtureを使用し、Gemini APIを呼ばない。`npm run gemini:check` 等の実APIコマンドは別途承認が必要。
 
+起動・停止だけを再確認する場合は、build後に `node --test --test-timeout=10000 dist/test/wireless-host.test.js` を実行する。実際の子プロセスでHTTP/WS・PCM、stdin EOFによる終了、同一ポート再起動、二重起動失敗を検証する。LinuxではSIGTERM/SIGINTによる通信中の停止も確認し、Windowsではこのシグナル2件をスキップする。テスト後にホストは常駐しない。
+
 ## Pythonテスト（ソース移管済み）
 
 ```bash

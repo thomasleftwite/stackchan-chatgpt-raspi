@@ -31,8 +31,8 @@
 - `server/.env.example` は内容を確認し、キー・トークン・接続先URLが空のサンプルとして例外的に移管。実際の `.env`、data、音声、登録特徴、個人設定、ファーム、配布物は対象外。
 - 既知のGoogle/GitHubトークン形式と秘密鍵ヘッダーを全移管ファイルに照合し0件。固定のテスト用ダミー値は保持。これはあらゆる秘密値の不存在を数学的に保証する検査ではない。
 - 依存定義・lockfile・Nodeテストを変更せず、Node 37件成功。オフライン自己診断も成功（API呼び出し0）。
-- 移管後の変更: `tests/test_voice_features.py` と `tests/test_wireless_host.py` のWindows専用テストにOS条件を付け、PCM検証を共通テストへ分離。非WindowsではWindows APIへの到達拒否とペアリング保存失敗時のファイル保全を検証する。アプリ実装は未変更。他の58ファイルは固定SHAと一致。マニフェストのsha256は移管元の基準を保持し、`local_modifications` に差分対象を記録する。
+- 移管後の変更: Pythonテスト2ファイルのWindows専用試験にOS条件を付け、PCM検証を共通テストへ分離。非WindowsではWindows APIへの到達拒否とペアリング保存失敗時のファイル保全を検証する。`server/wireless-host.ts` はfixtureでの厳密なループバック起動を許可し、`server/test/wireless-host.test.ts` に起動・停止の実プロセステスト5件を追加した。移管元60ファイルのうち57ファイルは固定SHAと一致。マニフェストのsha256は移管元の基準を保持し、`local_modifications` に差分対象を記録する。
 
 ## 現状の制約
 
-Windows版のコードを保持した段階で、Linux用GUI/秘密保存/音声処理は未実装。上流で再現したPythonの2エラーはWindows専用テストのOS条件漏れだった。修正後はPiで56件中52成功・4スキップ。これはLinux用ホスト機能の完成を意味しない。Windowsでの回帰実測、wireless-hostプロセスの正常起動・停止、AP・実機・外部APIの試験は未実施。
+Linux用GUI/秘密保存/音声処理は未実装。上流で再現したPythonの2エラーはWindows専用テストのOS条件漏れだった。修正後はPiで56件中52成功・4スキップ。wireless-hostのfixtureによるループバック起動・停止を含めNode42件成功。これはLinux用ホスト機能の完成を意味しない。Windowsでの回帰実測、AP・実機・外部APIの試験は未実施。

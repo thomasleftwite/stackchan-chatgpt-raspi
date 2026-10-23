@@ -10,6 +10,12 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 - `server/gemini-server.ts`, `server/gemini-*`, `server/voice-control.ts`, `server/voice-preview.ts`: 原則再利用。
 - `desktop/voices.py` と声レビュー処理: OS依存のない部分を抽出できるか検討。
 
+### API不要の起動・停止検証
+
+`wireless-host.ts` は `fixture:true`（boolean）、`host:"127.0.0.1"`、`subnet:"127.0.0.1/32"` の組合せに限り、ループバックでの試験起動を許可する。実APIキー・秘密設定を読み込まず、固定の無音PCMを返す。通常起動でのループバックや、fixtureによる全インターフェース/公開IP待受は拒否する。既存のprivate IPv4/AP側の起動条件は維持する。
+
+実プロセステストは専用ポートを使い、終了時に自身の子プロセスを回収する。端末や音声デバイスを使わないため、この成功をAP接続・実音声・Gemini応答の証明とはしない。
+
 ## Windows依存の差し替え候補
 
 | 現行ファイル | Windows依存 | Raspberry Pi対応案 |

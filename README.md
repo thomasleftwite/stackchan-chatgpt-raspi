@@ -22,4 +22,4 @@
 
 端末はDHCPゲートウェイのTCP 48443へ接続する。既存端末を無改造で使うには、Raspberry Piが端末側ネットワークのゲートウェイになる構成が必要。**既存のRaspberry Pi Connect/SSH接続を維持するまで、Wi-Fi/APやNetworkManager設定を変更しない。**
 
-上流固定SHAのserver・Windows desktop・関連テストを収録。PiでNodeテスト37件とオフライン自己診断が成功しています。Windows依存のPython処理は未移植で、Linux版ホストはまだ完成していません。起動・検証手順は開発環境資料を参照してください。
+上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト42件とオフライン自己診断が成功しています。Windows依存のPython処理は未移植で、Linux版ホストはまだ完成していません。起動・検証手順は開発環境資料を参照してください。

@@ -89,3 +89,19 @@
 - アプリ/Node/依存/端末ファームに変更なし。58ファイルの上流ハッシュ一致を再確認し、変更したテスト2ファイルは `UPSTREAM_FILES.json` の `local_modifications` に記録。sha256は移管元の値を保持。
 - `git diff --check` 成功。自己レビューで共通PCM検証が実行され、Windows専用テストの元の検証内容が維持されることを確認。Windows実環境のテストは未実施。GUI表示接続不可の隔離環境では既存GUIテスト3件の実行に引き続き制限がある。
 - Nodeコード・依存が変わらないためNode 37件と自己診断は直前の実測を参照し、今回は再実行していない。実API・実機・実音声の試験も行っていない。
+
+## 2026-10-23 wireless-host起動・停止検証
+
+- 開始HEAD: `9649286`、PR #2の `feat/import-upstream-host` branch。利用者から端末起動済みの報告とホスト起動・停止検証の指示を受けた。
+- 読み取り確認: `iw dev` のtypeはmanaged/P2P-device、APなし。`ip -j -4 address show up` の非loopbackはwlan0のみ。SSID/パスワード/IP値は出力していない。APや遠隔管理経路の設定は変更していない。
+- 既存ホストはprivate IPv4のみを許可するため、AP未構築のまま端末向け待受を始めず、実APIを使わないfixtureをループバックで検証する方針とした。
+- 先に追加した実プロセス試験を実行し、未変更ホストがready前に終了コード1となることを確認。fixture=true（boolean）かつ127.0.0.1/32の場合に限りループバック起動を許可する最小変更を行った。通常起動、曖昧なfixture指定、全インターフェース、公開IPは拒否する。
+- `cd server; npm run build; node --test --test-timeout=10000 dist/test/wireless-host.test.js`: build成功、新規5件すべて成功。実際のNode子プロセスを起動し、以下を確認した。
+  - health応答とprotocol v2、640 bytesの16kHz入力PCMからfixtureの24kHz無音PCM 1922 bytes/3フレームを受信。
+  - stdin EOFで終了コード0、同一ポートでの起動・通信・停止を2回成功。
+  - WS接続中のSIGTERM/SIGINTで終了コード0、WS切断、同一ポートで再起動成功。この2件はWindowsではスキップする。
+  - ポート使用中の二重起動は終了コード1/failedイベントのみで失敗し、先行ホストはhealth応答を継続。
+  - fixture未指定/false/文字列、広いloopback subnet、0.0.0.0/公開IP、特権ポート、null、不正JSONを拒否。標準エラーへ詳細を出していない。
+- `cd server; npm test`: TypeScript buildとNode全42件成功（今回の5件を含む）。ソケットを使うため隔離制限外で実施。子プロセスにはAPIキー・NODE_OPTIONS・秘密設定パスを継承しない。
+- テスト後にこのbuildを使うwireless-hostプロセスが0件であることを確認。57個の未変更上流ファイルのSHA256一致、`git diff --check`成功。変更したホストはマニフェストに記録し、差分を自己レビューした。
+- Pythonは今回変更しておらず、直前の56件中52成功・4スキップを参照。Windows実測、端末/AP経由の接続、Linux GUI、実音声、Gemini実APIは未実施。端末からの入力は受け付けず、ネットワーク公開・OS設定変更・実API呼び出しは行っていない。

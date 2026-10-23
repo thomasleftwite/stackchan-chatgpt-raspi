@@ -22,8 +22,8 @@
 - [x] Node.js >=22.9.0 をARM64に用意（公式22.23.4 / npm 10.9.9、Git除外の `.runtime/` に配置、SHA256照合済み）
 - [x] `server` で `npm ci --ignore-scripts` と `npm test` を実行（固定依存116パッケージ、TypeScript buildとNode 37件成功）
 - [x] Linux用PythonテストのOS条件を整備（56件: 52成功・Windows専用4件スキップ。非Windowsでの安全な拒否も検証。GUI試験には表示接続が必要）
-- [ ] `wireless-host.ts` のfixtureと起動・停止を確認
-- [ ] HTTP/WSプロトコル、音声PCMの回帰テストを追加
+- [x] `wireless-host.ts` のfixtureと起動・停止を確認（ループバック限定、EOF/SIGTERM/SIGINT・再起動・ポート解放。端末/AP経由は未実施）
+- [x] HTTP/WSプロトコル、音声PCMの回帰テストを追加（実プロセスのfixture試験5件追加、Node計42件成功）
 - [ ] WindowsとLinuxの両環境でテスト可能なCIを検討
 
 ## P2 Pythonホスト移植
@@ -40,6 +40,7 @@
 ## P3 ネットワーク
 
 - [ ] Piの現在の上流接続（Ethernet/無線）と遠隔管理経路を確認
+  - 2026-10-23: IPv4有効な非loopbackはwlan0のみ、Wi-Fiはmanaged/P2P-device、APなしを読み取り確認。遠隔管理経路の特定は未実施。
 - [ ] APに使用するWi-Fiインターフェースを決定
 - [ ] AP/DHCP/NATの設計とロールバック手順を文書化
 - [ ] AP設定変更前に利用者承認を取得

@@ -16,7 +16,10 @@ try {
   const [raw]=await once(lines,'line'); clearTimeout(timer);
   const value=JSON.parse(raw) as {host:string;port:number;subnet:string;fixture?:boolean};
   const ip=value.host?.split('.').map(Number);
-  if(!isIPv4(value.host) || !(ip[0]===10 || (ip[0]===172 && ip[1]!>=16 && ip[1]!<=31) || (ip[0]===192 && ip[1]===168)) ||
+  // Offline process tests may use loopback only with the exact fixture boundary.
+  const localFixture=value.fixture===true && value.host==='127.0.0.1' && value.subnet==='127.0.0.1/32';
+  if((value.fixture!==undefined && typeof value.fixture!=='boolean') || !isIPv4(value.host) ||
+     !(localFixture || ip[0]===10 || (ip[0]===172 && ip[1]!>=16 && ip[1]!<=31) || (ip[0]===192 && ip[1]===168)) ||
      !Number.isInteger(value.port) || value.port<1024 || value.port>65535 || !value.subnet) throw new Error();
   if(!hotspotPeerAllowed(value.host,value.subnet)) throw new Error();
   const config=value.fixture ? undefined : await loadGeminiConfig();

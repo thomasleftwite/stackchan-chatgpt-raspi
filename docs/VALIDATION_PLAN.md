@@ -308,3 +308,13 @@
 - 最終全Python回帰: 時間制限付きunittest discoverで139件中135成功・Windows専用4件スキップ、10.961秒、終了コード0。追加2件で、複数の試聴/採用/再起動/既定fixtureでの選択/再保存後も両方保持/サービス起動なし、およびfixture実行中のコマンド抑止と停止後解除を確認。実APIは使用しない。py_compileとgit diff --check成功。
 - 実GUIを正常終了して修正版を起動。保存済みキーと声設定を保持し、既定fixtureチェックありのままプルダウンを実際にPostしてstate=readonly、選択肢3件、メニューmapped=1、表示行数3を確認。Unpostして選択値は変更せず、ホストもAPIも開始していない。
 - 変更はPi専用GUI・回帰試験と資料だけ。端末ファーム、Windows製品コード、server、依存、OS/ネットワーク設定の変更なし。未検証: Windows実機、長時間運用。
+
+## 2026-10-23 開発整理・PR統合前の最終回帰
+
+- 作業branch: `docs/release-readiness-handoff`、開始HEAD `79a80d1`。利用者が複数声のプルダウン表示を再確認し、現時点を整理してpush/merge、次回に残項目とリリース準備を行うよう指定。
+- 主要機能・保存/復元の完了と未検証事項を分離し、README、TODO、PROGRESS、ROADMAPを更新。RELEASE_READINESSを追加。上流由来一覧は元のSHA256を維持し、既存serverの境界抽出/任意disconnectコールバックをlocal_modificationsへ反映。上流ファイルの実差分が未記載となる項目は0件。
+- `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" npm --prefix server run build`: 成功。Node全回帰54件成功・失敗/スキップ0、16.580秒、終了コード0。
+- 時間制限付きPython unittest discover: 139件中135成功・Windows専用4件スキップ、16.163秒、終了コード0。表示接続のある実Tk/合成端末を使用し、実API通信・実音声生成は行わない。
+- PR #6〜#12のheadを取得済み・検証済みコミットと照合し、mainへ依存順にmerge。各mergeの成功をAPIで確認。機能統合main `7dfe58d`と検証対象`79a80d1`のツリー差分0件。以後の文書変更だけではコード回帰を再実行しない。
+- 文書のローカルリンク不在0件、既知秘密形式の検出0件、上流由来の未記載差分0件、git diff --check成功。端末ファーム、Windows製品コード、依存、実機OS/ネットワーク設定に追加変更なし。GUIの再起動や新規実API試験は行わない。引継ぎは共有する資料へ参照を集約し、秘密値を含まない一時ファイルに保存する。
+- 残件は[RELEASE_READINESS](RELEASE_READINESS.md)。Pi本体再起動/実通信断/電源断/長時間会話/Windows実機/別機器からの拒否は未検証。リリース・タグ・配布物は今回作成しない。

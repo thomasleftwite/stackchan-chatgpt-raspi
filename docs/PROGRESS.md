@@ -16,13 +16,13 @@
 
 ## 未完了・未検証
 
-- Linuxでの設定・APIキーの永続保護、声の試聴・採用・保存とPCM再生/中断。基本ホストCLI/GUIは追加し、fixture起動・停止を確認したが、実API会話は未検証。
-- Gemini実APIを使う会話・実音声。実APIの課金試験は承認を得てから実施する。
+- Linuxでの設定・APIキーの永続保護、声の試聴・採用・保存とPCM再生/中断。基本ホストCLI/GUIは追加し、fixture起動・停止を確認したが、実APIの試行1回はAUTHで停止し、会話成功は未確認。
+- Gemini実APIを使う会話・実音声。利用者承認後の試行1回はAUTHで停止。長押し質問のホスト到達を確認したが、音声生成・再生は未確認。ウェイクワード無反応も報告され、端末の待受状態と認証を切り分け中。
 - Pi再起動後の自動復帰、通信断・長時間稼働、上流LAN上の別機器からの接続拒否、Windows実環境での回帰。
 - systemd等の常駐方式と配布。現状はアプリやホストを自動常駐させていない。
 
 ## 次の実装
 
-Linux用ホストのCLIと基本GUIを `raspi/host.py`、`host_network.py`、`host_ui.py` に追加した。NetworkManagerのAP側IPv4/サブネットを読み取り、既存のNodeホストを起動する。実APでfixture起動・停止・親CLIのSIGTERMと子プロセス回収を確認。キーはメモリ内だけで渡し、実APIは自動で呼ばない。次は利用者承認とローカルでのキー入力後に実会話を確認し、声の試聴・設定永続化へ進む。
+Linux用ホストのCLIと基本GUIを `raspi/host.py`、`host_network.py`、`host_ui.py` に追加した。NetworkManagerのAP側IPv4/サブネットを読み取り、既存のNodeホストを起動する。実APでfixture起動・停止・親CLIのSIGTERMと子プロセス回収を確認。キーはメモリ内だけで渡し、実APIは自動で呼ばない。利用者承認とローカルのキー入力を経た実API試行はAUTHで停止した。次は認証と端末の呼びかけ待受状態を確認し、実会話の成功後に声の試聴・設定永続化へ進む。
 
 詳細: [TODO](../TODO.md)、[検証記録](VALIDATION_PLAN.md)、[ネットワークと復旧](NETWORK_AP_SETUP.md)、[端末設定アプリ](../raspi/README.md)。

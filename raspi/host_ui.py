@@ -43,8 +43,10 @@ class HostWindow(VoiceUi):
             variable=self.fixture, command=self.controls)
         self.fixture_box.pack(anchor='w', pady=12)
         self.key = tk.StringVar(); self.model = tk.StringVar(value='gemini-3.8-live')
-        ttk.Label(frame, text='Gemini APIキー（今回の起動中だけ使用、保存しません）').pack(anchor='w')
+        ttk.Label(frame, text='Gemini APIキー（アプリ終了まで保持、ファイル保存なし）').pack(anchor='w')
         self.key_box = ttk.Entry(frame, textvariable=self.key, show='●'); self.key_box.pack(fill='x', pady=5)
+        self.clear_key_button = ttk.Button(frame, text='キーを消去', command=lambda: self.key.set(''))
+        self.clear_key_button.pack(anchor='w')
         ttk.Label(frame, text='Gemini Liveモデル').pack(anchor='w')
         self.model_box = ttk.Entry(frame, textvariable=self.model); self.model_box.pack(fill='x', pady=5)
         self.model.trace_add('write', lambda *_: self.refresh_voices())
@@ -94,6 +96,7 @@ class HostWindow(VoiceUi):
         self.fixture_box.configure(state='disabled' if busy or locked else 'normal')
         state = 'disabled' if busy or self.fixture.get() or locked else 'normal'
         self.key_box.configure(state=state); self.model_box.configure(state=state)
+        self.clear_key_button.configure(state='disabled' if busy or locked else 'normal')
         if self.preview_key_box is not None and self.preview_key_box.winfo_exists():
             self.preview_key_box.configure(state='disabled' if busy or locked else 'normal')
         self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
@@ -131,7 +134,7 @@ class HostWindow(VoiceUi):
             try: self.settings.select(model, voice)
             except Exception:
                 self.status.set('声の選択を保存できませんでした。設定ファイルの権限を確認してください。'); return
-        self.key.set(''); self.stop = threading.Event(); self.commands = queue.Queue(maxsize=32)
+        self.stop = threading.Event(); self.commands = queue.Queue(maxsize=32)
         self.stopping = False; self.failed = False; self.host_ready = False; self.last_seen = None
         self.status.set('起動中…'); self.host_status.set('ホスト：起動中'); self.session_status.set('会話：待機')
         def run():

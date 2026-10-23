@@ -38,7 +38,7 @@ class VoiceUi:
             if event.widget is dialog and self.review_dialog is dialog: self.review_dialog = None
         dialog.bind('<Destroy>', destroyed, add='+')
         frame = ttk.Frame(dialog, padding=18); frame.pack(fill='both', expand=True)
-        ttk.Label(frame, text='Gemini APIキー（試聴ごとに入力、保存しません）').pack(anchor='w')
+        ttk.Label(frame, text='Gemini APIキー（アプリ終了まで保持、ファイル保存なし）').pack(anchor='w')
         self.preview_key_box = ttk.Entry(frame, textvariable=self.key, show='●')
         self.preview_key_box.pack(fill='x', pady=(4, 8))
         model = self.model.get(); candidate = tk.StringVar()
@@ -71,7 +71,7 @@ class VoiceUi:
         key = self.key.get().strip()
         if not key:
             self.preview_status.set('この画面の非表示欄へAPIキーを入力してください。'); return
-        self.key.set(''); self.preview_cancel = threading.Event(); self.preview_id += 1
+        self.preview_cancel = threading.Event(); self.preview_id += 1
         job = (self.preview_id, model, voice); self.preview_job = job
         self.heard.discard((model, voice))
         self.preview_status.set('日本語サンプルを生成しています…')

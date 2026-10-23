@@ -38,7 +38,7 @@ class VoiceGuiTests(unittest.TestCase):
     def preview(self):
         self.app.sleep_confirmed.set(True); self.app.key.set('fixture-session-key-long-enough')
         self.app.start_preview(MODEL, 'Kore')
-        self.assertEqual(self.app.key.get(), '')
+        self.assertEqual(self.app.key.get(), 'fixture-session-key-long-enough')
         self.app.preview_worker.join(3); self.app.pump()
 
     def test_full_audition_adoption_selection_and_restart(self):
@@ -81,6 +81,7 @@ class VoiceGuiTests(unittest.TestCase):
         self.app.start_preview(MODEL, 'Kore'); self.assertTrue(entered.wait(2))
         self.app.start(); self.factory.assert_not_called()
         self.assertEqual(str(self.app.start_button['state']), 'disabled')
+        self.assertEqual(str(self.app.clear_key_button['state']), 'disabled')
         self.app.stop_preview(); self.app.preview_worker.join(3); self.app.pump()
         self.assertNotIn((MODEL, 'Kore'), self.app.heard)
         self.player.assert_not_called()
@@ -119,7 +120,7 @@ class VoiceGuiTests(unittest.TestCase):
         self.app.review_voices()
         self.assertEqual(len([w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]), 1)
 
-    def test_review_dialog_has_shared_masked_key_cleared_on_preview(self):
+    def test_review_dialog_reuses_masked_key_until_explicit_clear_or_close(self):
         self.app.review_voices()
         entry = getattr(self.app, 'preview_key_box', None)
         self.assertIsNotNone(entry)
@@ -128,8 +129,16 @@ class VoiceGuiTests(unittest.TestCase):
         entry.insert(0, 'fixture-session-key-long-enough')
         self.app.sleep_confirmed.set(True); self.app.start_preview(MODEL, 'Kore')
         self.app.preview_worker.join(3); self.app.pump()
-        self.assertEqual(entry.get(), '')
+        self.assertEqual(entry.get(), 'fixture-session-key-long-enough')
         self.assertIn((MODEL, 'Kore'), self.app.heard)
+        self.app.start_preview(MODEL, 'Puck'); self.app.preview_worker.join(3); self.app.pump()
+        self.assertEqual(self.generator.call_count, 2)
+        self.app.clear_key_button.invoke()
+        self.assertEqual(entry.get(), '')
+        self.assertEqual(self.app.key_box.get(), '')
+        self.app.start_preview(MODEL, 'Kore')
+        self.assertEqual(self.generator.call_count, 2)
+        self.assertEqual(set(self.store.data), {'version', 'records', 'selected'})
 
     def test_close_cancels_preview_and_drops_private_errors(self):
         self.generator.side_effect = ValueError('PRIVATE_PROVIDER_BODY')

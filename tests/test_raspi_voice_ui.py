@@ -102,6 +102,23 @@ class VoiceGuiTests(unittest.TestCase):
         self.assertEqual(self.store.selected(MODEL), '')
         self.app.worker = None
 
+    def test_review_dialog_is_owned_positioned_and_reused(self):
+        import tkinter as tk
+        self.root.deiconify(); self.root.geometry('760x760+20+20'); self.root.update_idletasks()
+        self.app.review_voices(); self.root.update_idletasks()
+        dialogs = [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]
+        self.assertEqual(len(dialogs), 1)
+        dialog = dialogs[0]
+        self.assertEqual(str(dialog.transient()), str(self.root))
+        self.assertGreaterEqual(dialog.winfo_rootx(), 0)
+        self.assertLessEqual(dialog.winfo_rootx()+dialog.winfo_width(), self.root.winfo_screenwidth())
+        self.app.review_voices()
+        self.assertEqual([w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)], dialogs)
+        # The registered close command cancels any audition.
+        self.root.tk.call(dialog.protocol('WM_DELETE_WINDOW'))
+        self.app.review_voices()
+        self.assertEqual(len([w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]), 1)
+
     def test_close_cancels_preview_and_drops_private_errors(self):
         self.generator.side_effect = ValueError('PRIVATE_PROVIDER_BODY')
         self.preview(); self.assertNotIn('PRIVATE', self.app.preview_status.get())

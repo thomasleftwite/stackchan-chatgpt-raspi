@@ -12,7 +12,7 @@ class VoiceUi:
         self.settings = settings if settings is not None else VoiceSettings()
         self.generator = generator; self.player = player
         self.preview_worker = None; self.preview_cancel = threading.Event(); self.preview_job = None
-        self.heard = set(); self.preview_id = 0
+        self.heard = set(); self.preview_id = 0; self.review_dialog = None
         self.sleep_confirmed = tk.BooleanVar(value=False)
         self.preview_status = tk.StringVar(value='試聴はPiの既定の音声出力から流れ、Gemini APIを使用します。')
 
@@ -20,7 +20,23 @@ class VoiceUi:
         return self.preview_worker is not None and self.preview_worker.is_alive()
 
     def review_voices(self):
-        dialog = tk.Toplevel(self.root); dialog.title('日本語の声を試聴・採用'); dialog.geometry('700x490')
+        if self.closing: return
+        self.root.deiconify(); self.root.lift()
+        if self.review_dialog is not None and self.review_dialog.winfo_exists():
+            self.review_dialog.deiconify(); self.review_dialog.lift(); self.review_dialog.focus_set(); return
+        dialog = tk.Toplevel(self.root); self.review_dialog = dialog
+        dialog.title('日本語の声を試聴・採用'); dialog.transient(self.root)
+        self.root.update_idletasks()
+        width = min(700, self.root.winfo_screenwidth()-40)
+        height = min(490, self.root.winfo_screenheight()-80)
+        x = self.root.winfo_rootx()+self.root.winfo_width()+20
+        if x+width > self.root.winfo_screenwidth()-20: x = self.root.winfo_rootx()+40
+        x = max(0, min(x, self.root.winfo_screenwidth()-width-20))
+        y = max(0, min(self.root.winfo_rooty()+20, self.root.winfo_screenheight()-height-40))
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+        def destroyed(event):
+            if event.widget is dialog and self.review_dialog is dialog: self.review_dialog = None
+        dialog.bind('<Destroy>', destroyed, add='+')
         frame = ttk.Frame(dialog, padding=18); frame.pack(fill='both', expand=True)
         model = self.model.get(); candidate = tk.StringVar()
         ttk.Combobox(frame, textvariable=candidate, values=self.settings.candidates(model), state='readonly').pack(fill='x', pady=6)
@@ -39,6 +55,7 @@ class VoiceUi:
         ttk.Label(frame, textvariable=self.preview_status, wraplength=650).pack(anchor='w', pady=10)
         def close(): self.stop_preview(); dialog.destroy()
         dialog.protocol('WM_DELETE_WINDOW', close)
+        dialog.lift(); dialog.focus_set()
 
     def start_preview(self, model, voice):
         if self.closing or self.preview_running() or self.preview_job is not None: return

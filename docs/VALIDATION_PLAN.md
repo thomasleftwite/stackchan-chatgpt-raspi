@@ -61,3 +61,19 @@
 - `gh auth setup-git --hostname github.com`: 成功。
 - `git push --dry-run origin feat/raspi-environment-preflight`: 成功（`cd4099c..d5a6188`）。Pi側のHTTPS認証不足は解消。dry-run時点ではリモート変更なし。
 - GitHub連携アプリの書き込み403は未解消。GitHub CLI経路とは別の認証であり、この成功を連携アプリの修復とは扱わない。
+
+## 2026-10-23 固定SHAからホストソース移管
+
+- 開始HEAD: `2706623`（PR #1 merge済みmain）。作業branch: `feat/import-upstream-host`。
+- 上流cloneのHEADを `dec249696e84f97b63eba122f33dbb624edfd484` に固定。許可リスト60ファイルの移管後バイト比較とSHA256照合は全件一致。`UPSTREAM_FILES.json` に一覧を記録。
+- data、端末ファーム、登録特徴、音声、個人設定、配布物を移管していない。空の秘密設定サンプルと固定のテスト用値は保持。Google/GitHubの既知トークン形式・秘密鍵ヘッダーの検査は0件。依存定義・lockfileは上流と一致。
+- Debian 13.6 / aarch64、Python 3.13.5。公式Node v22.23.4 / npm 10.9.9をGit除外の `.runtime/` に配置し、公式SHA256一致を確認（手順は `RASPI_DEV_SETUP.md`）。OSのNode・ネットワーク設定は変更していない。
+- NodeのbinをPATHに加え、`npm ci --prefix server --ignore-scripts --no-audit --no-fund --cache "$PWD/.runtime/npm-cache"`: 成功、116パッケージ。依存更新は行っていない。
+- `cd server; npm test`: TypeScript build成功。隔離環境ではソケット使用テスト7ファイルが失敗したが、制限外で同じコマンドを実行すると37件すべて成功。各サーバーの待受は127.0.0.1のみ。
+- `cd server; node dist/host-self-check.js`: PASS、12001 PCM samples、worker=true、apiCalls=0。
+- `python3 -m unittest discover -s tests -v`: 制限外で53件中49成功・2エラー・2スキップ、終了コード1。隔離環境ではGUI表示に接続できず追加3エラー（46成功・5エラー・2スキップ）。
+- Pythonの残る2エラー: `test_preview_rejects_non_pcm_and_cancelled_playback_does_not_open_audio` は `ValueError: PC_AUDIO`、`test_pairing_is_persistent_encrypted_and_corruption_fails_closed` は `RuntimeError: WINDOWS_REQUIRED`。Windows専用コードを保持したためLinuxでは実行不可。上流cloneで `python3 -m unittest discover -s tests` を実行しても同じ2件がエラー（49件中45成功・2エラー・2スキップ）となり、移管による新規失敗ではない。
+- PythonテストやWindows実装は変更せず、Linux向けテスト実行方針をTODOへ追加。Python全体が合格したとは扱わない。
+- `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" python3 scripts/check_environment.py`: 終了コード0、ランタイム前提PASS。ホスト/実機動作の合格判定ではない。
+- 移管したPythonファイルの構文確認、60ファイルのハッシュ再照合、既知秘密形式の再検査、ファーム/dataパス不在、ランタイムのGit除外を確認。`git diff --check` 成功。差分を自己レビューし、取り込んだコードとテストが固定SHAから未変更であることを確認。
+- Windows実環境、wireless-hostの正常起動・停止、AP・実機・実音声・外部APIは未検証。公開待受・OS設定変更・端末書込み・Gemini API呼び出しは行っていない。

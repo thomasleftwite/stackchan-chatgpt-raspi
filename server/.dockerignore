@@ -1,0 +1,8 @@
+**
+!package.json
+!package-lock.json
+!tsconfig.json
+!echo.ts
+!protocol.ts
+!probe-resample.ts
+!server.ts

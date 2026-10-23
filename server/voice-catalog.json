@@ -1,0 +1,6 @@
+{
+  "revision": "2026-10-21-r1",
+  "models": ["gemini-3.8-live"],
+  "source": "https://ai.google.dev/gemini-api/docs/live-api/capabilities#change-voice-and-language",
+  "voices": ["Kore", "Puck", "Aoede", "Charon", "Fenrir", "Zephyr"]
+}

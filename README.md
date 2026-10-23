@@ -1,6 +1,6 @@
 # Stackchan Chat Host — Raspberry Pi 5 移植計画
 
-状態: **上流ホストソース移管済み / Linuxホスト移植は未実装**（2026-10-23）
+状態: **有線上流・Wi-Fi AP・端末設定アプリ確認済み / Linux会話ホスト移植中**（2026-10-23）
 
 - 上流: https://github.com/thomasleftwite/stackchan-chatgpt
 - ベースライン: Windows Host 0.6.0-rc.1 / AtomS3R + Atomic Voice Base A149
@@ -9,12 +9,15 @@
 
 ## ドキュメント
 
+- [現在の進捗と次の作業](docs/PROGRESS.md)
 - [移植仕様](docs/PROJECT_SPEC.md)
 - [アーキテクチャと移植対象](docs/ARCHITECTURE.md)
 - [開発ロードマップ](docs/ROADMAP.md)
 - [ToDo](TODO.md)
 - [検証計画](docs/VALIDATION_PLAN.md)
 - [Raspberry Pi開発環境と引継ぎ](docs/RASPI_DEV_SETUP.md)
+- [有線上流・端末APと復旧](docs/NETWORK_AP_SETUP.md)
+- [Piアプリから端末Wi-Fiを設定](raspi/README.md)
 - [上流基準と移管記録](docs/UPSTREAM_IMPORT.md)
 - [開発エージェント指示](AGENTS.md)
 

@@ -105,3 +105,36 @@
 - `cd server; npm test`: TypeScript buildとNode全42件成功（今回の5件を含む）。ソケットを使うため隔離制限外で実施。子プロセスにはAPIキー・NODE_OPTIONS・秘密設定パスを継承しない。
 - テスト後にこのbuildを使うwireless-hostプロセスが0件であることを確認。57個の未変更上流ファイルのSHA256一致、`git diff --check`成功。変更したホストはマニフェストに記録し、差分を自己レビューした。
 - Pythonは今回変更しておらず、直前の56件中52成功・4スキップを参照。Windows実測、端末/AP経由の接続、Linux GUI、実音声、Gemini実APIは未実施。端末からの入力は受け付けず、ネットワーク公開・OS設定変更・実API呼び出しは行っていない。
+
+## 2026-10-23 有線上流固定・AP構築・Piアプリからの端末設定
+
+- 開始HEAD: `b091908`。`feat/raspi-wired-ap` branchを作成。利用者は有線HTTPS疎通成功後の恒久上流化、AP設定、新しいPi APへ端末接続先を更新することを明示承認し、さらにPiアプリからWiFiManagerへ設定する方式への変更を指示した。
+- `curl --interface eth0 ... https://github.com/`: HTTP 200。eth0はlink upで、設定前のIPv4 default metricはeth0=100 / wlan0=600だった。
+- 有線profileの自動接続とIPv4/IPv6既定経路を恒久化。旧Wi-Fi client profileは自動接続を無効にし、IPv4/IPv6 never-defaultを有効化。変更後も有線HTTPS成功、IPv4/IPv6の既定経路はeth0だけ。Wi-Fi上流への自動切替は構成していない。
+- wlan0のAP対応を確認し、競合しない10.42.0.1/24で2.4GHz channel 6 / 20MHz・WPA2/CCMP・NetworkManager sharedを設定。AP自動接続を有効化。実際のAPモード、wlan0のdnsmasq・DHCP範囲・APアドレス・lease fileを確認。有線HTTPSと既定経路維持も再確認した。
+- 有線変更には120秒、AP作成にはwlan0限定180秒checkpointを使用し、検証成功後に確定。秘密値とバックアップはGit除外領域にのみ保存し、ディレクトリ700・認証情報ファイル600を確認。実パスワード・元の接続名・UUID・端末MACを共有記録へ出していない。
+- AP上でfixtureホストを10.42.0.1:48443だけに起動。Piからのローカルhealthはprotocol v2でHTTP 200。同じPiのeth0アドレスではTCP 48443に接続できないことを確認。上流LAN上の別機器からの接続試験は未実施。
+- 最初の手動設定待機では180秒間の端末参加0台で終了。その後、利用者の追加指示に合わせて手動情報表示を閉じ、`raspi/provision.py`、`provision_network.py`、`provision_ui.py` を追加した。アプリはNetworkManagerからPi AP認証情報を取得し、一時的なメモリ内クライアント接続からWiFiManagerへPOSTし、finallyでPi APを復旧する。
+- 初回のアプリ実機試験は `PORTAL_FORM_MISMATCH` で送信前に停止し、AP復帰成功。実機の相対actionへの互換性を疑い、同じ相対フォームの回帰テストでエラーを再現した。許可するactionを `/wifisave` と `wifisave` だけに修正した後、実機再試験で `complete / saved=true / apRestored=true` を確認。任意のURLやリダイレクト先への送信は許可していない。
+- アプリで接続先保存後の確認: AP参加1台、DHCPリース1件、端末からのhealthイベント1件。今回はPi自身からhealthを呼ばず、遠隔イベントをローカル疎通と区別した。監視用スクリプトの冒頭表示には前回の固定文言が残っていたが、この回のlocalHealthはfalse（未実施）であり、ローカルhealthの成功結果は先行試験だけを根拠とする。fixtureの実API呼び出し0、会話セッション0、終了コード0。
+- 端末設定後にAPモード、IPv4/IPv6 defaultがeth0のみであること、一時接続profileが残っていないことを確認した。
+- 最終レビューでアプリのcheckpointはflags=0へ変更し、無関係な新規profileを削除しない構成にした。自分の一時profileだけを削除する。最終版のprepare/checkpoint作成・破棄も実機で確認（Wi-Fi切替・端末保存はこの確認では再実行していない）。
+- `python3 -m unittest discover -s tests -v`: 73件中69成功・Windows専用4件スキップ、エラー0。新規17件には失敗時AP復旧、誤経路時送信拒否、フォーム検証、相対パス、秘密値のstdin渡しとGUI欄消去、checkpoint対象限定を含む。GUI接続が可能な隔離制限外で実施した。
+- Nodeコードは今回変更しておらず、直前の全42件成功を参照し再実行していない。端末ファーム書込み・保存領域初期化・呼びかけ登録変更・API課金試験は実施していない。
+- 未検証: 再起動後の自動接続、別クライアントからの遠隔管理・上流LANからの拒否、Windows実行、Linux用Gemini会話GUI・秘密保存・実音声、長時間稼働。アプリからの端末Wi-Fi設定とHTTP到達の成功を、実会話の成功とは扱わない。
+- コミット対象11ファイルを確認し、実APパスワードとの一致0件、既知秘密形式0件、runtime/data/端末ファームの混入0件。`git diff --cached --check`成功。自己レビュー後、今回限りの端末設定用認証ファイルは削除した。
+
+## 2026-10-23 端末再起動後の接続復帰
+
+- 利用者が端末を再起動し、画面に「Start PC Service」と表示されたと報告。Pi自体は再起動していない。
+- 開始HEAD: `c8893ec`。読み取り確認でAP参加1台、DHCPリース1件、IPv4の既定経路はeth0のみ。
+- `sudo -n env VERIFY_REMOTE_ONLY=1 python3 .runtime/network/verify-device.py`: AP側10.42.0.1:48443へfixtureホストを起動し、端末からのhealthイベント1件を確認。Pi自身からhealthを呼ばず、端末の到達と区別した。端末再起動後のAP再接続・DHCP取得・ホストへのHTTP到達が成功。
+- 同じPiの有線側アドレスへのTCP 48443接続は拒否。実API呼び出し0、会話セッション0、確認後のホスト終了コード0。ホストは常駐していない。
+- 「Start PC Service」はホスト停止中の待機表示と整合する。起動後の画面遷移は利用者からの確認を得ておらず、画面検証の成功とは記録しない。
+- 変更はTODOと検証記録のみ。コード・OS設定・端末ファームは変更せず、Python/Nodeテストは再実行していない。Pi再起動、実API会話、実音声、会話後復帰は未検証。
+
+## 2026-10-23 進捗整理と統合準備
+
+- 利用者から、現状の整理・push・mergeと、その後の次工程への移行を明示指示された。
+- `docs/PROGRESS.md` を追加し、TODO/READMEの古い状態表示を現在の実測に合わせた。合格結果は直前のNode42件、Python73件中69成功・4スキップ、端末/APの実測を参照し、文書変更だけのため再実行はしていない。
+- PR #2/#3の先頭はそれぞれ `b091908` / `4aa7716`、競合なし、CI未設定であることを確認。統合前に文書差分・秘密値非混入を確認し、PRの依存順にmergeする。

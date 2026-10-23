@@ -101,6 +101,7 @@ class HostWindow(VoiceUi):
         if self.voice.get() not in values: self.voice.set(self.settings.selected(self.model.get()) or 'サービス既定')
 
     def controls(self):
+        self.review_controls()
         busy = self.running(); locked = self.closing or self.stopping or self.preview_running() or self.preview_job is not None
         self.start_button.configure(state='disabled' if busy or locked else 'normal')
         self.stop_button.configure(state='normal' if busy and not locked else 'disabled')

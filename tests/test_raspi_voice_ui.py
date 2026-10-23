@@ -121,6 +121,68 @@ class VoiceGuiTests(unittest.TestCase):
         self.app.review_voices()
         self.assertEqual(len([w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]), 1)
 
+    def test_reopen_moves_existing_dialog_back_inside_screen(self):
+        self.root.deiconify(); self.root.geometry('760x760+20+20')
+        self.app.review_voices(); self.root.update_idletasks()
+        dialog = self.app.review_dialog
+        dialog.geometry(f'700x640+{self.root.winfo_screenwidth()+100}+40')
+        self.root.update_idletasks(); self.app.review_voices(); self.root.update_idletasks()
+        self.assertIs(self.app.review_dialog, dialog)
+        self.assertLessEqual(dialog.winfo_rootx()+dialog.winfo_width(), self.root.winfo_screenwidth())
+
+    def test_unheard_adoption_disabled_and_candidate_survives_close_and_reopen(self):
+        self.app.review_voices()
+        candidate = getattr(self.app, 'preview_candidate', None)
+        self.assertIsNotNone(candidate)
+        candidate.set('Kore'); self.app.controls()
+        self.assertEqual(str(self.app.adopt_button['state']), 'disabled')
+        self.root.tk.call(self.app.review_dialog.protocol('WM_DELETE_WINDOW'))
+        self.app.review_voices(); self.root.update_idletasks()
+        self.assertEqual(self.app.preview_candidate.get(), 'Kore')
+        self.preview(); self.app.controls()
+        self.assertEqual(str(self.app.adopt_button['state']), 'normal')
+        self.app.adopt_button.invoke()
+        self.assertEqual(VoiceSettings(self.store.path).selected(MODEL), 'Kore')
+
+    def test_repeated_close_reopen_and_minimized_parent_restore_usable_dialog(self):
+        self.root.deiconify(); self.app.review_voices()
+        self.app.preview_candidate.set('Kore')
+        for _ in range(10):
+            self.root.tk.call(self.app.review_dialog.protocol('WM_DELETE_WINDOW'))
+            self.app.review_voices(); self.root.update_idletasks()
+            self.assertEqual(self.app.preview_candidate.get(), 'Kore')
+            self.assertEqual(len([w for w in self.root.winfo_children() if w.winfo_class() == 'Toplevel']), 1)
+        self.root.withdraw(); self.app.review_dialog.withdraw()
+        self.app.review_voices(); self.root.update_idletasks()
+        self.assertEqual(self.root.state(), 'normal')
+        self.assertEqual(self.app.review_dialog.state(), 'normal')
+        for button in (self.app.prepare_preview_button, self.app.sample_button, self.app.adopt_button):
+            self.assertLessEqual(button.winfo_rooty()+button.winfo_height(),
+                self.app.review_dialog.winfo_rooty()+self.app.review_dialog.winfo_height())
+
+    def test_terminal_trigger_instruction_waits_for_device_listening_gate(self):
+        self.app.preview_job = (1, MODEL, 'Kore', '端末')
+        self.app.preview_event({'internal': 'preview-waiting', 'id': 1})
+        self.assertIn('Listening', self.app.preview_status.get())
+        self.assertIn('ビープ', self.app.preview_status.get())
+        self.assertIn('待', self.app.preview_status.get())
+        self.app.preview_job = None
+
+    def test_dialog_can_prepare_from_running_fixture_without_api_generation(self):
+        entered = threading.Event()
+        self.factory.return_value.run.side_effect = lambda stop, *_args, **_kwargs: (entered.set(), stop.wait(3))
+        self.app.fixture.set(True); self.app.start(); self.assertTrue(entered.wait(1))
+        self.app.review_voices()
+        button = getattr(self.app, 'prepare_preview_button', None)
+        self.assertIsNotNone(button, '試聴画面内にホスト停止・準備の操作が必要')
+        button.invoke(); self.app.worker.join(3); self.app.pump()
+        self.assertFalse(self.app.running()); self.assertFalse(self.app.fixture.get())
+        self.generator.assert_not_called(); self.player.assert_not_called()
+        self.app.sleep_confirmed.set(True); self.app.key.set('fixture-session-key-long-enough')
+        self.app.start_preview(MODEL, 'Kore'); self.app.preview_worker.join(3); self.app.pump()
+        self.app.decide_voice(MODEL, 'Kore', True, REASON)
+        self.assertEqual(VoiceSettings(self.store.path).selected(MODEL), 'Kore')
+
     def test_review_dialog_reuses_masked_key_until_explicit_clear_or_close(self):
         self.app.review_voices()
         entry = getattr(self.app, 'preview_key_box', None)

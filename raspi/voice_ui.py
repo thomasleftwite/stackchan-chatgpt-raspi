@@ -16,6 +16,10 @@ class VoiceUi:
         self.preview_target = tk.StringVar(value='端末'); self.preview_target_box = None
         self.preview_worker = None; self.preview_cancel = threading.Event(); self.preview_job = None
         self.heard = set(); self.preview_id = 0; self.review_dialog = None; self.preview_key_box = None
+        self.preview_candidate = tk.StringVar(); self.review_model = None
+        self.prepare_preview_button = None; self.sample_button = None; self.adopt_button = None
+        self.candidate_box = None; self.preview_preparing = False
+        self.preview_candidate.trace_add('write', lambda *_: self.review_controls())
         self.sleep_confirmed = tk.BooleanVar(value=False)
         self.preview_status = tk.StringVar(value='端末で日本語サンプルを試聴します。Gemini APIを使用します。')
 
@@ -26,17 +30,9 @@ class VoiceUi:
         if self.closing: return
         self.root.deiconify(); self.root.lift()
         if self.review_dialog is not None and self.review_dialog.winfo_exists():
-            self.review_dialog.deiconify(); self.review_dialog.lift(); self.review_dialog.focus_set(); return
+            self.present_review(); return
         dialog = tk.Toplevel(self.root); self.review_dialog = dialog
         dialog.title('日本語の声を試聴・採用'); dialog.transient(self.root)
-        self.root.update_idletasks()
-        width = min(700, self.root.winfo_screenwidth()-40)
-        height = min(640, self.root.winfo_screenheight()-80)
-        x = self.root.winfo_rootx()+self.root.winfo_width()+20
-        if x+width > self.root.winfo_screenwidth()-20: x = self.root.winfo_rootx()+40
-        x = max(0, min(x, self.root.winfo_screenwidth()-width-20))
-        y = max(0, min(self.root.winfo_rooty()+20, self.root.winfo_screenheight()-height-40))
-        dialog.geometry(f'{width}x{height}+{x}+{y}')
         def destroyed(event):
             if event.widget is dialog and self.review_dialog is dialog: self.review_dialog = None
         dialog.bind('<Destroy>', destroyed, add='+')
@@ -48,25 +44,75 @@ class VoiceUi:
         self.preview_target_box = ttk.Combobox(frame, textvariable=self.preview_target,
             values=('端末', 'Pi（ローカル）'), state='readonly')
         self.preview_target_box.pack(fill='x', pady=4)
-        ttk.Label(frame, text='候補の声').pack(anchor='w')
-        model = self.model.get(); candidate = tk.StringVar()
-        ttk.Combobox(frame, textvariable=candidate, values=self.settings.candidates(model), state='readonly').pack(fill='x', pady=6)
-        ttk.Label(frame, text='ホストを停止して試聴を準備します。Sleepingなら短押しで起こしてReadyにし、\n約2秒長押しして離し、「テスト」など一言話してください。録音はAPIへ送らず破棄します。\n再生後、日本語が適切なら採用してください。', wraplength=650).pack(anchor='w', pady=6)
+        ttk.Label(frame, text='候補の声（選ぶだけでは追加されません）').pack(anchor='w')
+        self.candidate_box = ttk.Combobox(frame, textvariable=self.preview_candidate, state='readonly')
+        self.candidate_box.pack(fill='x', pady=6)
+        ttk.Label(frame, text='この画面で「1. 準備」→「2. 試聴」→「3. 採用して保存」の順に進めます。\n端末をReadyにし、約2秒長押しして「Release to ask」が出たら離します。\n準備中は静かに待ち、ビープ終了後に「Listening」が出てから一言話してください。\n録音はAPIへ送らず破棄します。聞こえた日本語を確認して採用してください。', wraplength=650).pack(anchor='w', pady=6)
+        self.prepare_preview_button = ttk.Button(frame, text='1. ホストを停止して試聴を準備（生成なし）', command=self.prepare_preview)
+        self.prepare_preview_button.pack(anchor='w', pady=4)
         ttk.Checkbutton(frame, text='Piで聴く場合のみ：端末をSleepingにしました', variable=self.sleep_confirmed).pack(anchor='w')
-        ttk.Button(frame, text='選択した試聴先で準備（Gemini API使用）',
-            command=lambda: self.start_preview(model, candidate.get())).pack(anchor='w', pady=6)
+        self.sample_button = ttk.Button(frame, text='2. 選択した声を試聴（Gemini API使用）',
+            command=lambda: self.start_preview(self.model.get(), self.preview_candidate.get()))
+        self.sample_button.pack(anchor='w', pady=6)
         ttk.Button(frame, text='試聴を停止', command=self.stop_preview).pack(anchor='w', pady=4)
         reason = tk.StringVar(value=REVIEW_REASONS['approved'][0])
         ttk.Label(frame, text='採用・除外の理由').pack(anchor='w')
         ttk.Combobox(frame, textvariable=reason, values=REVIEW_REASONS['approved']+REVIEW_REASONS['excluded'], state='readonly').pack(fill='x', pady=6)
-        ttk.Button(frame, text='日本語に適する：採用して保存',
-            command=lambda: self.decide_voice(model, candidate.get(), True, reason.get())).pack(anchor='w', pady=4)
+        self.adopt_button = ttk.Button(frame, text='3. 日本語に適する：採用して保存',
+            command=lambda: self.decide_voice(self.model.get(), self.preview_candidate.get(), True, reason.get()))
+        self.adopt_button.pack(anchor='w', pady=4)
         ttk.Button(frame, text='日本語に適さない：除外して保存',
-            command=lambda: self.decide_voice(model, candidate.get(), False, reason.get())).pack(anchor='w', pady=4)
+            command=lambda: self.decide_voice(self.model.get(), self.preview_candidate.get(), False, reason.get())).pack(anchor='w', pady=4)
         ttk.Label(frame, textvariable=self.preview_status, wraplength=650).pack(anchor='w', pady=10)
-        def close(): self.stop_preview(); dialog.destroy()
+        def close():
+            self.preview_preparing = False
+            self.stop_preview(); dialog.destroy()
         dialog.protocol('WM_DELETE_WINDOW', close)
-        dialog.lift(); dialog.focus_set()
+        self.present_review()
+
+    def present_review(self):
+        dialog = self.review_dialog
+        model = self.model.get()
+        self.candidate_box.configure(values=self.settings.candidates(model))
+        if self.review_model != model:
+            self.preview_candidate.set(''); self.review_model = model
+        self.root.update_idletasks()
+        width = min(700, self.root.winfo_screenwidth()-40)
+        height = min(700, self.root.winfo_screenheight()-80)
+        x = self.root.winfo_rootx()+self.root.winfo_width()+20
+        if x+width > self.root.winfo_screenwidth()-20: x = self.root.winfo_rootx()+40
+        x = max(0, min(x, self.root.winfo_screenwidth()-width-20))
+        y = max(0, min(self.root.winfo_rooty()+20, self.root.winfo_screenheight()-height-40))
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+        dialog.deiconify(); dialog.lift(); dialog.focus_set()
+        if not self.preview_running() and self.preview_job is None:
+            if self.running() or self.fixture.get():
+                self.preview_status.set('「1. ホストを停止して試聴を準備」を押してください。生成は行いません。')
+            elif (model, self.preview_candidate.get()) not in self.heard:
+                self.preview_status.set('候補を選び「2. 選択した声を試聴」を押してください。この画面を閉じる必要はありません。')
+        self.review_controls()
+
+    def prepare_preview(self):
+        if self.closing or self.preview_running() or self.preview_job is not None: return
+        self.preview_preparing = True
+        if self.running(): self.request_stop()
+        self.review_controls()
+        self.controls()
+
+    def review_controls(self):
+        if self.review_dialog is None or not self.review_dialog.winfo_exists(): return
+        if self.preview_preparing and not self.running():
+            self.preview_preparing = False; self.fixture.set(False)
+            self.preview_status.set('準備できました。候補を選んで「2. 選択した声を試聴」を押してください。')
+        locked = self.closing or self.preview_running() or self.preview_job is not None or self.preview_preparing
+        valid = self.preview_candidate.get() in self.settings.candidates(self.model.get())
+        for widget, enabled in (
+                (self.prepare_preview_button, not locked),
+                (self.sample_button, not locked and not self.running() and not self.fixture.get() and valid),
+                (self.adopt_button, not locked and valid and (self.model.get(), self.preview_candidate.get()) in self.heard)):
+            if widget is not None and widget.winfo_exists(): widget.configure(state='normal' if enabled else 'disabled')
+        if self.candidate_box is not None and self.candidate_box.winfo_exists():
+            self.candidate_box.configure(state='disabled' if locked else 'readonly')
 
     def start_preview(self, model, voice):
         if self.closing or self.preview_running() or self.preview_job is not None: return
@@ -141,7 +187,7 @@ class VoiceUi:
         if job is None or event.get('id') != job[0]: return
         stage = event.get('internal')
         if stage in ('preview-waiting', 'preview-generating', 'preview-output'):
-            text = {'preview-waiting': 'Sleepingなら短押しで起こしてReadyにし、約2秒長押し→離して「テスト」など一言話してください。',
+            text = {'preview-waiting': '端末操作を120秒待ちます。Readyで長押しし「Release to ask」が出たら離してください。準備中は静かに待ち、ビープ終了後の「Listening」を待って「テスト」と話してください。',
                 'preview-generating': '固定の日本語サンプルを生成しています。録音は破棄しました。',
                 'preview-output': '端末へサンプルを送信中です。端末の再生完了を待っています。'}
             if not self.preview_cancel.is_set(): self.preview_status.set(text[stage])
@@ -158,7 +204,7 @@ class VoiceUi:
         else:
             text = {'PC_AUDIO': 'Piで再生できません。音声出力先・音声デバイスを確認してください。',
                 'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA': 'APIの利用制限に達しました。',
-                'TIMEOUT': '試聴が時間切れになりました。端末の開始操作と接続を確認してください。',
+                'TIMEOUT': '試聴が時間切れになりました。「2. 選択した声を試聴」を押し直し、端末のビープ終了後にListeningを待って話してください。',
                 'INTERRUPTED': '端末との接続が中断しました。採用せず、接続後に再試行してください。', 'MODEL': 'このモデルを利用できません。'}
             self.preview_status.set(text.get(event.get('code'), '試聴できませんでした。APIキー・接続・設定を確認してください。'))
         self.preview_job = None

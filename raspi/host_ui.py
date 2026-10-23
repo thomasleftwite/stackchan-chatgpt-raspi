@@ -5,7 +5,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 
-from raspi.host import make_service, public_event
+from raspi.host import make_service, make_device_preview_service, public_event
 from raspi.voice_ui import VoiceUi
 from raspi.voice_preview import generate_sample, play_pcm
 
@@ -28,10 +28,10 @@ FAILURE_LABELS = {'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA':
 
 class HostWindow(VoiceUi):
     def __init__(self, root, factory=make_service, clock=time.monotonic, *, settings=None,
-                 generator=generate_sample, player=play_pcm):
+                 generator=generate_sample, player=play_pcm, device_factory=make_device_preview_service):
         self.root = root; self.factory = factory; self.clock = clock
         self.worker = None; self.closing = False; self.stopping = False
-        self.init_voices(settings, generator, player)
+        self.init_voices(settings, generator, player, device_factory)
         self.events = queue.Queue(); self.commands = queue.Queue(maxsize=32)
         self.stop = threading.Event(); self.request_id = 0
         self.last_seen = None; self.host_ready = False; self.failed = False
@@ -99,6 +99,8 @@ class HostWindow(VoiceUi):
         self.clear_key_button.configure(state='disabled' if busy or locked else 'normal')
         if self.preview_key_box is not None and self.preview_key_box.winfo_exists():
             self.preview_key_box.configure(state='disabled' if busy or locked else 'normal')
+        if self.preview_target_box is not None and self.preview_target_box.winfo_exists():
+            self.preview_target_box.configure(state='disabled' if busy or locked else 'readonly')
         self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
         self.review_button.configure(state='disabled' if self.closing else 'normal')
         # The provider's default cannot be restored by a voice command; restart to use it.
@@ -158,14 +160,16 @@ class HostWindow(VoiceUi):
         self.history.see('end'); self.history.configure(state='disabled')
 
     def handle_event(self, raw):
-        if isinstance(raw, dict) and raw.get('internal') in ('preview-playing', 'preview-ended'):
+        if isinstance(raw, dict) and raw.get('internal') in ('preview-playing', 'preview-ended', 'preview-waiting', 'preview-generating', 'preview-output'):
             self.preview_event(raw); return
         if isinstance(raw, dict) and raw.get('event') == 'finished':
             self.host_ready = False; self.host_status.set('ホスト：停止中（エラー）' if self.failed else 'ホスト：停止中')
             self.session_status.set('会話：待機'); return
         event = public_event(raw)
         if event is None: return
-        kind = event['event']; text = LABELS[kind]
+        kind = event['event']
+        if kind not in LABELS: return
+        text = LABELS[kind]
         if kind == 'turn-failed': text = FAILURE_LABELS.get(event.get('code'), text)
         if kind == 'ready':
             self.host_ready = True
@@ -187,6 +191,10 @@ class HostWindow(VoiceUi):
         self.log(text)
 
     def update_monitor(self):
+        if self.preview_job is not None and self.preview_job[3] == '端末':
+            self.host_status.set('ホスト：端末試聴モード')
+            self.device_status.set('端末：試聴画面の案内に従って操作してください。'); return
+        if not self.running(): self.host_status.set('ホスト：停止中（エラー）' if self.failed else 'ホスト：停止中')
         if not self.host_ready:
             self.device_status.set('端末：ホスト停止中' if not self.running() else '端末：ホストの待受開始を待っています')
         elif self.last_seen is None: self.device_status.set('端末：通信待ち（未確認）')

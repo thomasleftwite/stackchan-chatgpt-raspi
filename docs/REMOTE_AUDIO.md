@@ -2,13 +2,17 @@
 
 更新: 2026-10-23。
 
-## 現在の動作
+## 現在の推奨手順: 端末で試聴
 
-WindowsからConnectのターミナルや画面共有を使っても、RasPi版ホストはPi上で動く。試聴は`raspi/voice_preview.py`のALSA/aplayでPiの音声出力へ送る。Windowsのサウンドデバイスを利用する処理はない。端末との会話回答は従来どおり端末のスピーカーへ送る。
+利用者からPiでの音声再生を使えないと指定されたため、試聴先の既定を端末へ変更した。GUIで専用待受を準備し、Readyの端末で長押しして短い一言を話すと、固定の日本語サンプルが端末のスピーカーから再生される。録音は破棄しAPIへ送らない。Pi/Windowsの音声出力やConnectの音声転送は不要。操作と制約は [Piアプリ](../raspi/README.md#端末で声を試聴採用保存) を参照。
+
+## Piローカル試聴の動作
+
+WindowsからConnectのターミナルや画面共有を使っても、RasPi版ホストはPi上で動く。補助経路のPiローカル試聴は`raspi/voice_preview.py`のALSA/aplayでPiの音声出力へ送る。Windowsのサウンドデバイスを利用する処理はない。端末との会話回答は従来どおり端末のスピーカーへ送る。
 
 Connectのターミナル接続は音声転送を提供しない。画面共有についても、[Raspberry Pi開発者の説明](https://forums.raspberrypi.com/viewtopic.php?t=389450)では音声のストリーミングに対応しておらず、[WayVNCの音声対応課題](https://github.com/any1/wayvnc/issues/209)も未完了。ConnectやWindowsの音量設定を変えるだけではPiの試聴音声をPCへ転送できない。
 
-## 今のRasPi版で聞く手順
+## 補助経路: Piの音声出力が使える場合の手順
 
 1. Piに接続した音声対応HDMIモニター、または利用できるUSB等の音声出力を用意する。
 2. Piのデスクトップの音声メニューで、その出力先とミュート/音量を確認する。PC側の音量ではなくPi側の出力を確認する。

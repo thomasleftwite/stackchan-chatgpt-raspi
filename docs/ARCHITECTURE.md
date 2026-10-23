@@ -57,3 +57,14 @@ AP側のみでlistenし、同一サブネットの接続元だけ許可する。
 - https://github.com/thomasleftwite/stackchan-chatgpt/blob/main/desktop/settings.py
 - https://github.com/thomasleftwite/stackchan-chatgpt/blob/main/desktop/voice_preview.py
 - https://github.com/thomasleftwite/stackchan-chatgpt/blob/main/server/wireless-host.ts
+
+
+## 端末での声試聴（2026-10-23）
+
+- 利用者の指定により、RasPi版の既定の試聴先を端末へ変更。通常ホストを停止し、`server/device-preview-host.ts`を同じAP IP/TCP 48443で1回だけ起動する。待受条件は`host-boundary.ts`に抽出し、通常のwireless-hostと同じprivate AP/厳密fixture境界を共有する。
+- 端末は既存ファームのReady→長押し→一言の録音で通信を開始する。サーバーから端末を起動する命令や新しい端末プロトコルは追加しない。GUIはこの操作を案内し、120秒で試聴待受を打ち切る。
+- `server/device-preview.ts`は受信した入力PCMをすぐに消去し、既存VoiceControl.previewの固定テキストを生成する。SDK/生成ワーカーへ録音を渡さない。既存createGeminiServerの出力フレーム/credit/drain/playedを使って24kHz PCMを返す。
+- 既存gemini-serverに任意のonDisconnectコールバックを追加し、通常会話のbusy解除とは独立に端末切断を検出する。端末試聴では生成中の切断でAbortSignalを発火し、遅れて返るPCMも消去する。通常の呼出元は未指定のままで動作を維持する。
+- 専用ホストのstdoutは固定イベントとrequest ID/失敗分類だけ。PCMをPython/GUIへ渡さず、preview-playedとsession-idleの両方を受けてから親が停止・回収する。切断・中断・期限切れを成功扱いしない。終了時は生成ワーカーを含む自身のプロセスグループを回収する。
+- `raspi.host.make_device_preview_service`、VoiceUiの端末バックエンドを追加。通常ホスト/試聴を排他にし、再生完了通知後だけ声評価のheardを付ける。採用/除外・XDG保存は従来と同じ。Piローカル試聴は任意の補助経路として保持。
+- 端末ファーム、Windows製品コード、実機ネットワーク設定は変更しない。共通の待受境界抽出は通常会話を含むNode全54件で回帰確認。

@@ -28,6 +28,7 @@
 
 ## P2 Pythonホスト移植
 
+- [x] Piアプリから端末WiFiManagerへ接続先を設定し、Pi APへ復帰（`python3 -m raspi.provision --gui`、実機保存・再接続成功）
 - [ ] `raspi/` の構成とCLIエントリポイントを設計
 - [ ] PowerShell依存のホットスポット検出をLinuxへ置換
 - [ ] `node.exe` 起動をLinux `node` 起動へ置換
@@ -41,16 +42,16 @@
 
 - [ ] Piの現在の上流接続（Ethernet/無線）と遠隔管理経路を確認
   - 2026-10-23: IPv4有効な非loopbackはwlan0のみ、Wi-Fiはmanaged/P2P-device、APなしを読み取り確認。遠隔管理経路の特定は未実施。
-- [ ] APに使用するWi-Fiインターフェースを決定
-- [ ] AP/DHCP/NATの設計とロールバック手順を文書化
-- [ ] AP設定変更前に利用者承認を取得
-- [ ] TCP 48443の待受をAP側IPのみに制限
-- [ ] ESP32-S3のDHCPゲートウェイがPiであることを確認
+- [x] APに使用するWi-Fiインターフェースを決定（wlan0。上流eth0有線を恒久化）
+- [x] AP/DHCP/NATの設計とロールバック手順を文書化（`docs/NETWORK_AP_SETUP.md`、実機AP起動済み）
+- [x] AP設定変更前に利用者承認を取得（有線固定、AP化、新APへの端末接続先更新を承認）
+- [x] TCP 48443の待受をAP側IPのみに制限（fixtureを10.42.0.1にbind、同一Piのeth0アドレスでは接続拒否を確認）
+- [x] ESP32-S3のDHCPゲートウェイがPiであることを確認（AP DHCP取得とゲートウェイのホスト/healthzへの到達を確認）
 - [ ] 上流LAN側からTCP 48443にアクセスできないことを確認
 
 ## P4 実機・運用
 
-- [ ] ESP32-S3ファームウェア無変更でWi-Fi接続確認
+- [x] ESP32-S3ファームウェア無変更でWi-Fi接続確認（新APへの接続先保存は利用者承認済み。登録特徴は変更せず）
 - [ ] ウェイクワード→録音→Gemini Live→音声再生を確認
 - [ ] 会話後待受・端末再起動・Pi再起動・通信断復帰を検証
 - [ ] 長時間稼働、API制限、音声冒頭欠け、再生停止を検証

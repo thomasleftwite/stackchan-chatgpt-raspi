@@ -191,3 +191,17 @@
 - PR #5の先頭 `e90e344` がMERGEABLE/CLEANであることを確認した。今回の文書追加後に再度先頭・差分を確認してmergeする。コード変更なしのためPython/Nodeテストは再実行しない。既存結果はPython88件中84成功・4スキップ、Node42件。
 - コンパクト化の継続用要約はhandoffスキルに従い一時ディレクトリへ保存し、Gitへ含めない。チャットを圧縮する操作ツールはこの接続にはないため、実際のチャット圧縮が完了したとは扱わない。
 - 文書差分を自己レビューし、更新資料のローカルリンク不在0件、`git diff --check`成功。秘密値、音声、個人設定、端末ファーム、runtimeの混入なしを変更対象で確認。
+
+## 2026-10-23 fixtureホストの反復質問・接続断回復
+
+- PR #5を先頭 `eae235f`・MERGEABLE/CLEAN・変更文書9ファイル・CI設定なしで最終確認し、利用者承認に従い `1483b29` へmerge。mainをfast-forward同期し、`test/host-reconnection` branchへ移動。
+- 継続要約を `/tmp/stackchan-raspi-handoff.md`（モード600）へ保存。チャットを圧縮する操作ツールはなく、公式の入力欄 `/compact` 操作が必要と利用者へ説明済み。実際の圧縮は未確認のまま、引継ぎ記録に基づき次工程を実施した。
+- `server/test/wireless-host.test.ts` に実プロセスの回帰試験5件を追加。本番コード・Windows desktop・依存・端末ファーム・実機OS/ネットワーク設定の変更なし。子ホストは既存のキーを継承せず、127.0.0.1/32のfixtureだけを使用する。
+  - 同じホストで3回の質問を完了し、各回のsession-idle・voice-playedとプロセス継続を確認。
+  - 入力PCMのack後にtransportを切断し、再生完了0件のままidleへ復帰。再接続した質問は最後まで成功。
+  - 出力開始後に先頭PCMフレームだけを受け取り、transport切断またはstopを送信。不完全な応答はvoice-playedを報告せず、再接続後の質問は完了。
+  - 先頭出力フレームの受信後に自身のfixture子プロセスへSIGKILL。同一ポートで新ホストを起動し、質問が完了。Windowsではこの1件をスキップする。
+- `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" npm --prefix server run build`: TypeScript build成功。
+- `.runtime/node-v22.23.4-linux-arm64/bin/node --test --test-timeout=10000 server/dist/test/*.test.js`: 47件すべて成功、失敗/スキップ0、終了コード0。実API呼び出し・音声生成・実機操作は行っていない。
+- Pythonは変更しておらず、前工程の88件中84成功・4スキップを参照して再実行しない。合成peerによるplayed通知は実スピーカー再生の証拠とはしない。実機Wi-Fi断、実API処理中断、Pi再起動、長時間稼働、Windows実測は未検証。
+- 最終差分を自己レビューし、`git diff --check`成功、更新文書のローカルリンク不在0件、禁止対象の変更0件、検証後のwireless-host残存0件を確認した。

@@ -27,4 +27,4 @@
 
 端末はDHCPゲートウェイのTCP 48443へ接続する。既存端末を無改造で使うには、Raspberry Piが端末側ネットワークのゲートウェイになる構成が必要。**既存のRaspberry Pi Connect/SSH接続を維持するまで、Wi-Fi/APやNetworkManager設定を変更しない。**
 
-上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト42件とオフライン自己診断が成功しています。Linux用CLI/基本GUIを追加し、実機で呼びかけからGemini Liveの音声回答まで1回確認しました。声のPi試聴、設定保存、反復会話や障害復帰の検証は残っています。起動・検証手順は開発環境資料を参照してください。
+上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト47件とオフライン自己診断が成功しています。Linux用CLI/基本GUIを追加し、実機で呼びかけからGemini Liveの音声回答まで1回確認しました。声のPi試聴、設定保存、反復会話や障害復帰の検証は残っています。起動・検証手順は開発環境資料を参照してください。

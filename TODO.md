@@ -5,13 +5,16 @@
 ## P0 リポジトリ・環境
 
 - [x] `thomasleftwite/stackchan-chatgpt-raspi` の存在とorigin同期を確認（2026-10-23、`c30d71d`）
-- [ ] 上流 `stackchan-chatgpt` の基準コミットSHAとライセンスを記録
-- [ ] 上流ソースの安全な移管方法を決定（git履歴を維持するか、ソーススナップショットか）
+- [x] 上流 `stackchan-chatgpt` の基準コミットSHAとライセンスを記録（`dec249696e84f97b63eba122f33dbb624edfd484`、MIT。`docs/UPSTREAM_IMPORT.md`）
+- [x] 上流ソースの安全な移管方法を決定（固定SHAからホスト関連だけをスナップショット移管。実際の移管は未実施）
+- [ ] 移管対象のファイル一覧を精査し、LICENSE・server・desktop・関連テストを固定SHAから移管
 - [ ] この計画資料とAGENTS.mdを新規repoへ追加、PRレビュー、mainへmerge
-- [ ] Raspberry Pi上でcloneしてVS Codeで開く
+- [x] Raspberry Pi上のclone済み作業ツリーを確認（VS Codeでの表示確認は別項目）
+- [ ] VS Codeで作業ツリーを開いたことを確認
 - [x] 実行環境を記録：Debian 13.6 / aarch64、Python 3.13.5、Git 2.47.3。Node/npm未導入
 - [x] 読み取り専用の環境診断 `scripts/check_environment.py` と単体テストを追加
 - [ ] 秘密情報がコミット対象に入らないことを確認
+  - 2026-10-23: 上流の秘密設定・登録特徴・配布物の除外パターンを追加。移管後の内容検査は未実施。
 
 ## P1 Node.js基盤
 

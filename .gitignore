@@ -12,3 +12,10 @@ settings.json
 voice-reviews.json
 pairing.json
 secrets.json
+secrets.json.*
+wakeword*.bin*
+wakeword*.meta*
+bridge.local.json
+bridge.local.json.*
+.packaging/
+releases/

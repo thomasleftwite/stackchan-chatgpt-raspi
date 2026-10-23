@@ -1,0 +1,261 @@
+{
+  "repository": "https://github.com/thomasleftwite/stackchan-chatgpt",
+  "commit": "dec249696e84f97b63eba122f33dbb624edfd484",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "505e309271ea3ffbba15e705d529b0b17c4569853b1084767d7dc8591befb08b"
+    },
+    {
+      "path": "desktop/README.ja.md",
+      "sha256": "3a0e8831d13b3d74010031ee0ab45229219872556134c7a478f616434aab6f3c"
+    },
+    {
+      "path": "desktop/README.md",
+      "sha256": "a85ae353c0406d0a8cc160852c906c8d5e9f993ae6e97ec4bf11161e2c016d87"
+    },
+    {
+      "path": "desktop/build_windows.py",
+      "sha256": "e54fdc519b8c9bd74ee6ca352c258b6c32e83435f62839ec5450f39faab199ff"
+    },
+    {
+      "path": "desktop/host_app.py",
+      "sha256": "37034f36a0672c8218fd33e0d208962bd5ac60803565d9098d740c19be1b9f9e"
+    },
+    {
+      "path": "desktop/network.py",
+      "sha256": "32de4175a2d0c0a263c94b32c1d3b040ec084219b73930ba03535222ff019145"
+    },
+    {
+      "path": "desktop/requirements-build.txt",
+      "sha256": "d0f159d44333cc0dfa612cda41b1b04ceea89089e5c347bda14a6cdcc210d122"
+    },
+    {
+      "path": "desktop/settings.py",
+      "sha256": "c39d2ca5e8be2e6f095bda7dcd4b698c18ad852872703efd952683c7e1c71706"
+    },
+    {
+      "path": "desktop/voice_preview.py",
+      "sha256": "91c50b58a10fb2a654ec921d70399a866e9ddef5e5e765e2fed791ae738949b8"
+    },
+    {
+      "path": "desktop/voices.py",
+      "sha256": "ca5b5c05369074d7221b0ccb8d77918573bb65ce5f1b0ba9bcf3ad0962880dfb"
+    },
+    {
+      "path": "desktop/wireless.py",
+      "sha256": "c16387517a9577624d6ba190729ea264d21e38b70150afe85f9e40835d01afb2"
+    },
+    {
+      "path": "docs/HOTSPOT_TRUST.md",
+      "sha256": "e43ce0fd574ab580ceec09627e75d8d0ef04e560d9f2e8222555f6dc7c576f70"
+    },
+    {
+      "path": "docs/STACKCHANHOST_VOICE_SPEC.md",
+      "sha256": "278fc8eab3dc637b5e37c83f189c742b9627a37988af6fba67b1b474bfbaa9f4"
+    },
+    {
+      "path": "docs/WIRELESS_HOST.md",
+      "sha256": "dc2990a54d62688bd0b5910b9482116c4a1dd22751c2945f83a3db38a2a2d531"
+    },
+    {
+      "path": "server/.dockerignore",
+      "sha256": "eaa56ddf6a50cfbfd2cc0be49117a19d587e4536b3e67241ca374464237994ff"
+    },
+    {
+      "path": "server/.env.example",
+      "sha256": "dd00ede25d0c27858130e747f4ba2abe3a49bb5b908abfc3315201e4b631d7ef"
+    },
+    {
+      "path": "server/Dockerfile",
+      "sha256": "0cb6e9b12f3fae5f1431e0478029d8a35e374c8cf4c926faf71346b2ba039647"
+    },
+    {
+      "path": "server/README.md",
+      "sha256": "74e95627c0684d90e2241160345e14e3d67f9fef2f50b2dd7c43ef4169301e06"
+    },
+    {
+      "path": "server/echo.ts",
+      "sha256": "51d13fbe6220c8c92b6623496e6178e4042233563943f49acd26d87c9801d9d7"
+    },
+    {
+      "path": "server/gemini-check.ts",
+      "sha256": "76dac8d52cba5b1d83de64f05c77abbdab9a90b915fbad2ba6116f045ce25398"
+    },
+    {
+      "path": "server/gemini-isolated.ts",
+      "sha256": "f74fbeca121e8722afb370ee483be5811b2d1eed3fca5b04a0a3e2277c73c0bf"
+    },
+    {
+      "path": "server/gemini-local-check.ts",
+      "sha256": "41f8f42ff2ff4cf35e811327a1e291cb6a3514764d6fe0aa056ceea2a98da743"
+    },
+    {
+      "path": "server/gemini-pc.ts",
+      "sha256": "a100c0d6fad4e9c1c62c67429065222d4d38220f916263184b166f26377aa112"
+    },
+    {
+      "path": "server/gemini-probe-client.ts",
+      "sha256": "d5d869b931841ac8c53e77db327e96a06fb96b913f33e302abae4445785b3096"
+    },
+    {
+      "path": "server/gemini-server.ts",
+      "sha256": "f86d98197f91b8c38666dfb4dd5839804fc282158d0ccddbe6be19ea2e4e540b"
+    },
+    {
+      "path": "server/gemini-turn.ts",
+      "sha256": "8c6abf777a2e376fc29dd5168444660d9cab96c5923ea47efc8375ec45525143"
+    },
+    {
+      "path": "server/gemini-worker.ts",
+      "sha256": "03ae53f0442a25b9a9e701c59efb90c43aca7754cd60c61682f1a54a54b3385e"
+    },
+    {
+      "path": "server/host-self-check.ts",
+      "sha256": "c0819656f1ce67a1931dd7442742a20a9a750f712660a8912317822b85544e44"
+    },
+    {
+      "path": "server/init-private-env.ts",
+      "sha256": "0330d24df8f0a05d45549f178fad0ccc68a290dda55d4ecd350489578ae5b88a"
+    },
+    {
+      "path": "server/local-gemini.ts",
+      "sha256": "be5bdcec6af5536efe2c39ac272aca5b70cc76044422f73f25cb794f016d60c0"
+    },
+    {
+      "path": "server/local-lan.ts",
+      "sha256": "6eae36bc9649edd01e789655dfa65a07fb7fb7125a0180aca5a0753a78bebe6e"
+    },
+    {
+      "path": "server/package-lock.json",
+      "sha256": "5ef5c48ffa8a04b9e2188b715f87d0ffb1b7b81a7ed1e4cd89d066f36c47c5cc"
+    },
+    {
+      "path": "server/package.json",
+      "sha256": "8d15015a4cbab95045cac8867f7085c8e29eb125ce112d6bee15944269b58557"
+    },
+    {
+      "path": "server/private-config.ts",
+      "sha256": "78c1e1e412e33cfe816322856b7bd9660824101082c420966c46fba613f69ece"
+    },
+    {
+      "path": "server/probe-resample.ts",
+      "sha256": "e22d2ba73e43761efdee373a41af9c8690c95e03ff89d2521caa94daf8004747"
+    },
+    {
+      "path": "server/protocol.ts",
+      "sha256": "c221a18682eeafdf3c396f6b4a4cd3e6ca3620a6d01566c9cf22e785d465d419"
+    },
+    {
+      "path": "server/server.ts",
+      "sha256": "3580ccba4bfa051430f8f497037b9e7122038075d481ade904468b28d35ca16c"
+    },
+    {
+      "path": "server/smoke.ts",
+      "sha256": "d2b8acd50d7324275b49a23765b52be421c59c45f7b4e8b9e9a072fa8019f1ec"
+    },
+    {
+      "path": "server/test/echo.test.ts",
+      "sha256": "18a2f16b1a5eb973f709b32c7824c2d428e34579ff1c94dd792a226dc77cf863"
+    },
+    {
+      "path": "server/test/gemini-server.test.ts",
+      "sha256": "a58e5496993915c71cb34b41ac8ebb2056974cbb166a4ba778446468f17aba2e"
+    },
+    {
+      "path": "server/test/gemini-turn.test.ts",
+      "sha256": "14d1336e7bd81f9ec9b365ee23418b6a1cda0ba6fc0cb9f96c579d7596cfb577"
+    },
+    {
+      "path": "server/test/hotspot-trust.test.ts",
+      "sha256": "ec2cd4b5595abbc7107f4ac331bb521f395a413e1ab6d327f33938a725423ef8"
+    },
+    {
+      "path": "server/test/pcm-loopback.test.ts",
+      "sha256": "bf96366c64aac1139ec6936ca9411bbe44feff94539a228260de2a6e3eecb31f"
+    },
+    {
+      "path": "server/test/pcm-stream.test.ts",
+      "sha256": "0b8e4ffb4fe402f5dad7a9e9eac90b5bcd1b985ece227fdb9fc3ba5d3785778d"
+    },
+    {
+      "path": "server/test/private-config.test.ts",
+      "sha256": "55b2a7617a2d01fd86127ce708adc3c663103c6552c445865575b4396339f3e3"
+    },
+    {
+      "path": "server/test/protocol.test.ts",
+      "sha256": "986f50590b3615cfa5ce0825b9ac0b06a977a8d30a5a4ec3584092caccb78094"
+    },
+    {
+      "path": "server/test/voice-control.test.ts",
+      "sha256": "f5211ccf99f7a073462db81461fed3473bd38bd6c6eacf84eac40880d55ab726"
+    },
+    {
+      "path": "server/test/wireless-tls.test.ts",
+      "sha256": "afcc8ba3e18e48ade85a805eae44f3e0eedb1f2d517f605f90dd417020e3c423"
+    },
+    {
+      "path": "server/tsconfig.json",
+      "sha256": "8cf6ad4b76fadfaaa57f1f568356051d8d5cb7428bc1531db4b316a70b3704a8"
+    },
+    {
+      "path": "server/voice-catalog.json",
+      "sha256": "0976a70ee07e30a6cb15d9b964866f1d759d8143bb54662a194341ce5745f0f6"
+    },
+    {
+      "path": "server/voice-control.ts",
+      "sha256": "8512d1042d358574e5238d396db4d47c62de1c278b9696c056a3c95c6889f6fe"
+    },
+    {
+      "path": "server/voice-preview.ts",
+      "sha256": "c0dc52f10cf72165c9e50fe7b7305b7b458ae05dd8f6e05c682a8fc68885ceb9"
+    },
+    {
+      "path": "server/wireless-host.ts",
+      "sha256": "db144fa2f943424170a501a1aec5dd5e629ef412b2d633a8c143318b503fb734"
+    },
+    {
+      "path": "tests/test_desktop_host.py",
+      "sha256": "09dcec25c70c6c1f3d000f6f24d7e640409139467b672e7cd40ed30cb416ef78"
+    },
+    {
+      "path": "tests/test_enrollment_status.py",
+      "sha256": "94f5860d13431c58f467bbafdb61b13b3c5e197638125a847e2d3e02afba0a06"
+    },
+    {
+      "path": "tests/test_gemini_coordinator.py",
+      "sha256": "625c5492bc555ce4c50bfd10b8b9097425ebd584ebacfc1252188a342830147c"
+    },
+    {
+      "path": "tests/test_voice_features.py",
+      "sha256": "1d74484e9ea471ee90b941e6ea1419762b03482bc02506521d91603f844f5616"
+    },
+    {
+      "path": "tests/test_wireless_host.py",
+      "sha256": "9ffa4920f032a128abafd4540732e039f8fdbfab6de75f6f38070c63fdfbee3f"
+    },
+    {
+      "path": "tools/run_gemini_device.py",
+      "sha256": "c4564c08faa470bf16084e7118df23043eff666f65ca7a87dab8f5d8b4456fe3"
+    },
+    {
+      "path": "tools/run_lan_probe.py",
+      "sha256": "59a38ecfdcf8e5a9a01938e5423a914a99b9519ae23fb2f91c70a98a94672dd6"
+    }
+  ],
+  "hash_scope": "sha256 records original bytes at the pinned upstream commit; local changes are listed separately.",
+  "local_modifications": [
+    {
+      "path": "tests/test_voice_features.py",
+      "reason": "Separate portable PCM validation from Windows-only cancellation; test non-Windows rejection."
+    },
+    {
+      "path": "tests/test_wireless_host.py",
+      "reason": "Limit DPAPI roundtrip to Windows; test non-Windows rejection without credential writes."
+    },
+    {
+      "path": "server/wireless-host.ts",
+      "reason": "Allow exactly 127.0.0.1/32 for explicit boolean fixture mode to test process lifecycle without AP or API."
+    }
+  ]
+}

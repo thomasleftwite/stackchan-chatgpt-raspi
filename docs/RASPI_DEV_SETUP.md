@@ -37,15 +37,40 @@ npm --version
 git status --short
 ```
 
-## Nodeテスト（上流ソースが移管済みの場合のみ）
+## プロジェクト用Node ARM64環境
+
+2026-10-23: 公式Node v22.23.4 ARM64 / npm 10.9.9を `.runtime/node-v22.23.4-linux-arm64/` に配置して検証した。システムのNodeやPATH設定は変更していない。Debianの標準候補Node 20.19.2は上流要件を満たさない。
+
+別のcloneで同じ環境を用意する場合は、リポジトリ直下で以下を実施する。既存ランタイムがある場合は取得・展開を省略する。
+
+```bash
+mkdir -p .runtime
+curl --fail --location https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-arm64.tar.xz -o .runtime/node-v22.23.4-linux-arm64.tar.xz
+echo '6287aa46b6c375d816e63ae66d024fbbfd70404825aabdfdf898a970871d2f4b  .runtime/node-v22.23.4-linux-arm64.tar.xz' | sha256sum --check -
+# 上の照合が成功した場合のみ展開する。
+tar -xJf .runtime/node-v22.23.4-linux-arm64.tar.xz -C .runtime
+export PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH"
+node --version
+npm --version
+python3 scripts/check_environment.py
+```
+
+SHA256は取得時の公式 `https://nodejs.org/dist/v22.23.4/SHASUMS256.txt` と照合済み。`.runtime/` はGit除外で、依存キャッシュを含め配布物には含めない。上記exportは現在のシェルだけに適用する。
+
+## Nodeテスト（ソース移管済み）
 
 ```bash
 cd server
 npm ci --ignore-scripts
 npm test
+node dist/host-self-check.js
 ```
 
-## Pythonテスト（上流ソースが移管済みの場合のみ）
+Nodeテストと自己診断はループバック通信とfixtureを使用し、Gemini APIを呼ばない。`npm run gemini:check` 等の実APIコマンドは別途承認が必要。
+
+起動・停止だけを再確認する場合は、build後に `node --test --test-timeout=10000 dist/test/wireless-host.test.js` を実行する。実際の子プロセスでHTTP/WS・PCM、stdin EOFによる終了、同一ポート再起動、二重起動失敗を検証する。LinuxではSIGTERM/SIGINTによる通信中の停止も確認し、Windowsではこのシグナル2件をスキップする。テスト後にホストは常駐しない。
+
+## Pythonテスト（ソース移管済み）
 
 ```bash
 cd ..
@@ -53,6 +78,8 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
 Python依存を入れる場合はOS標準環境を汚さず、venvを使用する。Nodeバージョンは `server/package.json` の要件を確認する。
+
+今回のPiではTkinterとpyserialが既存環境で利用可能だった。追加インストールは行っていない。GUIテストには表示先への接続が必要。Windows音声/DPAPI専用テストはLinuxでは計4件をスキップし、共通PCM検証と非Windows環境での安全な拒否を別途検証する。修正後のPiで56件中52成功・4スキップ。表示先に接続できない隔離環境ではGUIテスト3件が別途エラーとなる。Windows版の実行結果やLinux用ホスト実装の完成とは区別する。
 
 ## AP構築時の注意
 

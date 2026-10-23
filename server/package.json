@@ -1,0 +1,30 @@
+{
+  "name": "stackchan-live-bridge",
+  "version": "0.2.0-dev",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test --test-timeout=10000 dist/test/*.test.js",
+    "start": "node --env-file-if-exists=.env dist/server.js",
+    "smoke": "node --env-file-if-exists=.env dist/smoke.js",
+    "gemini:check": "npm run build && node --env-file-if-exists=.env dist/gemini-check.js",
+    "gemini:serve": "node --env-file-if-exists=.env dist/gemini-pc.js",
+    "gemini:local-check": "npm run build && node --env-file-if-exists=.env dist/gemini-local-check.js",
+    "gemini:init": "node dist/init-private-env.js"
+  },
+  "dependencies": {
+    "@google/genai": "2.30.0",
+    "express": "5.3.0",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.5",
+    "@types/ws": "8.18.2",
+    "typescript": "7.0.2"
+  }
+}

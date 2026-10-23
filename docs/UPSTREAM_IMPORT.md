@@ -1,6 +1,6 @@
 # 上流基準とソース移管手順
 
-確認日: 2026-10-23。ソース移管そのものは未実施。
+確認日: 2026-10-23。固定SHAからホスト関連60ファイルを移管済み。
 
 ## 固定する基準
 
@@ -24,6 +24,15 @@
 6. Node ARM64環境を用意した後、`server`で`npm ci --ignore-scripts`と`npm test`を実施。API利用を伴うテストは明示承認まで実施しない。Windows固有PythonテストのLinux結果はWindows互換性の証明としない。
 7. TODO.mdと検証記録を更新し、差分をレビューしてPRへまとめる。
 
+## 移管結果
+
+- 許可リストと移管時の各ファイルのSHA256: `UPSTREAM_FILES.json`。LICENSE、server 39ファイル、desktop 10ファイル、Pythonテスト5ファイル、補助スクリプト2ファイル、通信/声仕様3ファイルの計60ファイル。移管時はすべて固定SHAとバイト一致。
+- 補助スクリプトはPythonテストとWindows配布処理が参照する `tools/run_gemini_device.py` と `tools/run_lan_probe.py` のみ。端末操作機能は実行していない。
+- `server/.env.example` は内容を確認し、キー・トークン・接続先URLが空のサンプルとして例外的に移管。実際の `.env`、data、音声、登録特徴、個人設定、ファーム、配布物は対象外。
+- 既知のGoogle/GitHubトークン形式と秘密鍵ヘッダーを全移管ファイルに照合し0件。固定のテスト用ダミー値は保持。これはあらゆる秘密値の不存在を数学的に保証する検査ではない。
+- 依存定義・lockfile・Nodeテストを変更せず、Node 37件成功。オフライン自己診断も成功（API呼び出し0）。
+- 移管後の変更: Pythonテスト2ファイルのWindows専用試験にOS条件を付け、PCM検証を共通テストへ分離。非WindowsではWindows APIへの到達拒否とペアリング保存失敗時のファイル保全を検証する。`server/wireless-host.ts` はfixtureでの厳密なループバック起動を許可し、`server/test/wireless-host.test.ts` に起動・停止の実プロセステスト5件を追加した。移管元60ファイルのうち57ファイルは固定SHAと一致。マニフェストのsha256は移管元の基準を保持し、`local_modifications` に差分対象を記録する。
+
 ## 現状の制約
 
-Node/npm未導入のためホストテストは未実施。ホストのファイル一覧精査・移管・秘密内容検査も未実施。ネットワークやOS設定の変更、端末書込み、外部APIの呼び出しはこの手順の対象外。
+Linux用GUI/秘密保存/音声処理は未実装。上流で再現したPythonの2エラーはWindows専用テストのOS条件漏れだった。修正後はPiで56件中52成功・4スキップ。wireless-hostのfixtureによるループバック起動・停止を含めNode42件成功。これはLinux用ホスト機能の完成を意味しない。Windowsでの回帰実測、AP・実機・外部APIの試験は未実施。

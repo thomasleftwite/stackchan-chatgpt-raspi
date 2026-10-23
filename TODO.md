@@ -4,7 +4,7 @@
 
 現在の到達点: 上流ホスト移管、有線上流・Wi-Fi AP、Piアプリからの端末Wi-Fi設定、端末再起動後のホスト到達まで確認済み。次工程としてLinux用ホストの基本CLI/GUIを追加し、fixtureで検証。実APIの初回試行はAUTHで停止したが、キー再入力後に呼びかけから音声回答まで1回成功。[進捗整理](docs/PROGRESS.md)。
 
-直近の記録: [開発経緯](docs/DEVELOPMENT_HISTORY.md)。次の作業は、実APIを呼ばずに反復質問・切断後再接続の回帰検証を追加する。
+直近の記録: [開発経緯](docs/DEVELOPMENT_HISTORY.md)。fixtureでの反復質問・切断後再接続の回帰5件を追加し、Node全47件成功。次は実機の反復会話・中断/復帰の検証とPi音声試聴の設計。
 
 ## P0 リポジトリ・環境
 
@@ -24,10 +24,10 @@
 ## P1 Node.js基盤
 
 - [x] Node.js >=22.9.0 をARM64に用意（公式22.23.4 / npm 10.9.9、Git除外の `.runtime/` に配置、SHA256照合済み）
-- [x] `server` で `npm ci --ignore-scripts` と `npm test` を実行（固定依存116パッケージ、TypeScript buildとNode 42件成功）
+- [x] `server` で `npm ci --ignore-scripts` と `npm test` を実行（固定依存116パッケージ、TypeScript buildとNode 47件成功）
 - [x] Linux用PythonテストのOS条件を整備（ホストCLI/GUI試験込み88件: 84成功・Windows専用4件スキップ。GUI試験には表示接続が必要）
 - [x] `wireless-host.ts` のfixtureと起動・停止を確認（EOF/SIGTERM/SIGINT・再起動・ポート解放、端末/AP経由のhealth到達も確認）
-- [x] HTTP/WSプロトコル、音声PCMの回帰テストを追加（実プロセスのfixture試験5件追加、Node計42件成功）
+- [x] HTTP/WSプロトコル、音声PCMの回帰テストを追加（実プロセスのfixture試験計10件、Node計47件成功）
 - [ ] WindowsとLinuxの両環境でテスト可能なCIを検討
 
 ## P2 Pythonホスト移植
@@ -59,6 +59,7 @@
 - [x] ウェイクワード→録音→Gemini Live→音声再生を確認（2026-10-23、承認済み実APIの単発試験）
   - 2026-10-23: 承認済みの実API試行で長押し質問1件を受信したが、AUTHで終了。音声生成・再生なし。利用者から呼びかけ無反応の報告あり。試行時の端末表示はStart PC Service、キーはGoogle AI Studio発行と利用者が確認。生成なしの認証GETもHTTP 400 / API_KEY_INVALIDで拒否。利用者による再入力後の認証GETはHTTP 200で成功。再試行でturn-complete/voice-played/session-idle/stoppedを受信し、利用者も呼びかけ反応と音声回答を確認。長時間・反復会話・障害復帰は別途検証。
 - [ ] 会話後待受・端末再起動・Pi再起動・通信断復帰を検証
+  - [x] 実API不要の実プロセスfixtureで、3回の反復質問、入力中の切断、出力フレーム途中の切断/stop、SIGKILL後の同一ポート再起動と質問完了を確認（回帰5件追加）。実機Wi-Fi断・実API中断とは区別。
   - [x] 端末再起動後のAP再接続・DHCP取得・fixtureホスト到達を確認（2026-10-23）。実会話復帰とPi再起動は未検証。
 - [ ] 長時間稼働、API制限、音声冒頭欠け、再生停止を検証
 - [ ] systemd/デスクトップ起動方式を選択

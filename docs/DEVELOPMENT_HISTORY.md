@@ -25,6 +25,6 @@
 
 ## 次工程と検証境界
 
-最初に、実ホストプロセスのfixtureで同一ホストへの反復質問、入力中/出力中の接続断、切断後の再接続を検証する。HTTP/WSの復帰と実機Wi-Fi断・実API中断は区別する。その後、声のPi試聴と設定保存の方式を決める。
+文書整理のPR #5は `1483b29` へmerge済み。その後の実ホストfixture試験で反復質問、入力中/出力フレーム途中の切断・stop、SIGKILL後の同一ポート再起動・次質問完了の5件を追加し、Node全47件成功。実装の修正は不要だった。HTTP/WSの復帰と実機Wi-Fi断・実API中断は区別する。次は実機検証の継続と、声のPi試聴・設定保存の方式決定。
 
 PR: [#1](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/1)、[#2](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/2)、[#3](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/3)、[#4](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/4)、[#5](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/5)。

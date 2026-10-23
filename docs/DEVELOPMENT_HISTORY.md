@@ -28,3 +28,9 @@
 文書整理のPR #5は `1483b29` へmerge済み。その後の実ホストfixture試験で反復質問、入力中/出力フレーム途中の切断・stop、SIGKILL後の同一ポート再起動・次質問完了の5件を追加し、Node全47件成功。実装の修正は不要だった。HTTP/WSの復帰と実機Wi-Fi断・実API中断は区別する。次は実機検証の継続と、声のPi試聴・設定保存の方式決定。
 
 PR: [#1](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/1)、[#2](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/2)、[#3](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/3)、[#4](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/4)、[#5](https://github.com/thomasleftwite/stackchan-chatgpt-raspi/pull/5)。
+
+## 2026-10-23 Windows版に合わせたRasPi GUIの拡充
+
+利用者の指定に合わせ、声カタログのプルダウン、ホストサービスの開始/停止、端末状態モニターを追加。既存の開始/停止を拡張し、二重開始防止、停止中の操作制御、再開、終了待機を整備した。声の選択は初期環境と既存stdinコマンドへ渡し、実行中の回答を変えず次の質問へ反映する。端末のhealth等に基づく最終受信時刻、30秒の通信未確認表示、会話/再生状態と固定文言の履歴を追加した。端末ファーム・server・Windows製品コード・実機設定・依存の変更はない。新GUIでの有料API試験は実施していない。
+
+Python95件中91成功・Windows専用4件スキップ、TypeScript buildとNode47件成功。GUI破棄時の予約コールバックも回収し、終了後のTkエラーを解消。声の試聴・採用評価・保存とLinuxのキー保護方式は次工程として残す。

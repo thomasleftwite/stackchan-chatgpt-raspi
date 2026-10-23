@@ -138,3 +138,16 @@
 - 利用者から、現状の整理・push・mergeと、その後の次工程への移行を明示指示された。
 - `docs/PROGRESS.md` を追加し、TODO/READMEの古い状態表示を現在の実測に合わせた。合格結果は直前のNode42件、Python73件中69成功・4スキップ、端末/APの実測を参照し、文書変更だけのため再実行はしていない。
 - PR #2/#3の先頭はそれぞれ `b091908` / `4aa7716`、競合なし、CI未設定であることを確認。統合前に文書差分・秘密値非混入を確認し、PRの依存順にmergeする。
+
+## 2026-10-23 統合完了とLinuxホスト次工程
+
+- 進捗整理を `fcbebe7` へコミット・push。利用者の明示承認に従い、PR #2を `ed15d4b` でmerge後、PR #3をmainへretargetし、先頭 `fcbebe7`・MERGEABLE/CLEANを再確認して `d3f000d` でmergeした。mainはorigin/mainへfast-forward同期し、新しい `feat/raspi-host-cli` branchを作成した。
+- Linux専用のAP読み取り、Node実行、CLI/基本GUIを `raspi/host_network.py`、`host.py`、`host_ui.py` に追加。AP/shared接続かつ一意なRFC1918 IPv4/16〜/30だけを選び、上流・公開IP・曖昧なアドレスを拒否する。OS/ネットワーク設定は今回変更していない。
+- Node >=22.9.0を検証し、自身のNodeを専用プロセスグループで起動。EOF→SIGTERM→SIGKILLで自身の子だけを終了・回収し、GUIを閉じる際も処理の終了を待つ。Nodeのstderrやprovider本文を表示せず、固定イベントと許可された失敗分類だけを取り出す。
+- GUIはAPI不要のfixtureを初期状態とし、実APIを使うモードではキーを今回のセッションだけで保持。入力欄は開始時に消去する。CLIは明示の `--live` と対話端末での非表示入力を要求し、非TTYでキー入力へフォールバックしない。継承済みキー・NODE_OPTIONS・秘密設定を子へ渡さない。
+- `python3 -m raspi.host --fixture --duration 3`: 実APを自動検出してready→stopped、終了コード0。
+- CLIを実AP上で別プロセスとしてfixture起動後、親CLIへSIGTERMを送信: stoppedイベント、終了コード0。検証後にこのbuildのwireless-hostプロセスが0件であることを確認した。
+- 新規テストはAP境界、Nodeバージョン、継承キー排除、明示キー必須、固定エラー分類、秘密情報除去、キー入力取消、非TTY拒否、CLIのシグナル、子の強制回収、実Node再起動/同一ポート再利用、GUIの初期状態とキー欄消去を検証する。実APIの接続はモックであり、課金API呼び出しは行っていない。
+- 非TTYガード追加時のテストでキー入力取消が期待130に対し1となる失敗を検出。sys import漏れを修正し、最終の `python3 -m unittest discover -s tests` は88件中84成功・Windows専用4件スキップ、失敗/エラー0。
+- Node/Windows共通コードや依存は変更しておらず、Node全42件は前工程の結果を参照して再実行していない。`git diff --check`とPython構文確認は成功。
+- 未検証: 実APIによる会話・音声とその中断、Linuxの声管理/PC試聴、設定永続化、Pi再起動と外部LAN/Windows実測。今回のGUIは基本起動・停止の段階であり、全受入条件の達成とは扱わない。

@@ -6,7 +6,7 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 
 ## 再利用するコンポーネント
 
-- `server/wireless-host.ts`: 標準入力JSON `{host,port,subnet}` で待受先を指定。まず変更せず動作検証。
+- `server/wireless-host.ts`: 標準入力JSON `{host,port,subnet,fixture?}` で待受先を指定。通常のAP待受と、明示したfixtureに限るループバック検証に対応。
 - `server/gemini-server.ts`, `server/gemini-*`, `server/voice-control.ts`, `server/voice-preview.ts`: 原則再利用。
 - `desktop/voices.py` と声レビュー処理: OS依存のない部分を抽出できるか検討。
 
@@ -15,6 +15,15 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 `wireless-host.ts` は `fixture:true`（boolean）、`host:"127.0.0.1"`、`subnet:"127.0.0.1/32"` の組合せに限り、ループバックでの試験起動を許可する。実APIキー・秘密設定を読み込まず、固定の無音PCMを返す。通常起動でのループバックや、fixtureによる全インターフェース/公開IP待受は拒否する。既存のprivate IPv4/AP側の起動条件は維持する。
 
 実プロセステストは専用ポートを使い、終了時に自身の子プロセスを回収する。端末や音声デバイスを使わないため、この成功をAP接続・実音声・Gemini応答の証明とはしない。
+
+## 実装済みLinuxホスト
+
+- `raspi/host_network.py`: NetworkManagerのAP/sharedと一意なprivate IPv4/サブネットを読み取る。設定変更は行わない。
+- `raspi/host.py`: ARM64 Nodeを起動し、標準入力で待受設定を渡す。キーは明示入力のセッション内だけで保持し、子の環境へ渡す。EOF→SIGTERM→SIGKILLで自身のプロセスグループを回収する。
+- `raspi/host_ui.py`: Tkinterで開始/停止・状態を表示。初期状態はAPI不要のfixture。Live利用時も開始時にキー欄を消去する。
+- `raspi/provision*.py`: 端末WiFiManager経由の接続先設定とPi AP復帰。実機設定の変更は承認済みの操作範囲に限る。
+
+Windows用desktopは保持し、Linuxのキー永続保護・声管理/試聴は今後の実装とする。
 
 ## Windows依存の差し替え候補
 

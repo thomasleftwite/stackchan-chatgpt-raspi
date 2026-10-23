@@ -8,7 +8,7 @@
 
 - 上流固定SHAのホスト関連60ファイルを移管し、MITライセンス・由来・移管後の差分を記録。
 - 公式Node 22.23.4 ARM64 / npm 10.9.9をGit除外領域に配置。固定依存を導入し、Node全42件とオフライン自己診断が成功。
-- Linuxで不適切に実行されていたWindows専用PythonテストのOS条件を修正。Piアプリの設定・復旧試験を含めPython全73件中69成功、Windows専用4件スキップ。
+- Linuxで不適切に実行されていたWindows専用PythonテストのOS条件を修正。Piアプリの設定・復旧とホストCLI/GUI試験を含むPython全88件中84成功、Windows専用4件スキップ。
 - eth0を恒久的なインターネット経路に固定。wlan0を2.4GHz/WPA2の端末APに構成し、DHCPを提供。端末接続失敗時もWi-Fiを上流へ戻さない。
 - Piアプリから端末のWiFiManagerへ接続先をPOSTで保存し、Pi APへ復帰する機能を実装・実機確認。秘密値はコマンド引数・URL・共有ログへ含めない。
 - 端末のAP参加、DHCP取得、ホストのHTTP到達を確認。端末再起動後も同じ経路へ復帰することを確認。端末ファーム書込み・登録特徴変更は行っていない。
@@ -25,5 +25,7 @@
 ## 次の実装
 
 Linux用ホストのCLIと基本GUIを `raspi/host.py`、`host_network.py`、`host_ui.py` に追加した。NetworkManagerのAP側IPv4/サブネットを読み取り、既存のNodeホストを起動する。実APでfixture起動・停止・親CLIのSIGTERMと子プロセス回収を確認。キーはメモリ内だけで渡し、実APIは自動で呼ばない。利用者承認とローカルのキー入力を経た実API試行は、初回AUTH後にキーを再入力して成功。利用者の呼びかけ反応・音声回答の確認とホストの生成/端末再生完了イベントが一致した。次は反復会話・中断/復帰の検証と、声の試聴・設定永続化へ進む。
+
+経緯と判断: [開発経緯](DEVELOPMENT_HISTORY.md)。次工程はfixtureでの反復質問・切断後再接続の回帰検証を優先する。
 
 詳細: [TODO](../TODO.md)、[検証記録](VALIDATION_PLAN.md)、[ネットワークと復旧](NETWORK_AP_SETUP.md)、[端末設定アプリ](../raspi/README.md)。

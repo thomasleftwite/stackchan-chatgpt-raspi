@@ -4,6 +4,8 @@
 
 現在の到達点: 上流ホスト移管、有線上流・Wi-Fi AP、Piアプリからの端末Wi-Fi設定、端末再起動後のホスト到達まで確認済み。次工程としてLinux用ホストの基本CLI/GUIを追加し、fixtureで検証。実APIの初回試行はAUTHで停止したが、キー再入力後に呼びかけから音声回答まで1回成功。[進捗整理](docs/PROGRESS.md)。
 
+直近の記録: [開発経緯](docs/DEVELOPMENT_HISTORY.md)。次の作業は、実APIを呼ばずに反復質問・切断後再接続の回帰検証を追加する。
+
 ## P0 リポジトリ・環境
 
 - [x] `thomasleftwite/stackchan-chatgpt-raspi` の存在とorigin同期を確認（2026-10-23、`c30d71d`）

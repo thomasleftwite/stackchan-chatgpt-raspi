@@ -1,6 +1,6 @@
 # Stackchan Chat Host — Raspberry Pi 5 移植計画
 
-状態: **有線上流・Wi-Fi AP・端末設定アプリ確認済み / Linux会話ホスト移植中**（2026-10-23）
+状態: **LinuxホストCLI/基本GUI・呼びかけから実音声回答まで単発確認済み / 移植継続中**（2026-10-23）
 
 - 上流: https://github.com/thomasleftwite/stackchan-chatgpt
 - ベースライン: Windows Host 0.6.0-rc.1 / AtomS3R + Atomic Voice Base A149
@@ -10,6 +10,7 @@
 ## ドキュメント
 
 - [現在の進捗と次の作業](docs/PROGRESS.md)
+- [開発経緯と判断の記録](docs/DEVELOPMENT_HISTORY.md)
 - [移植仕様](docs/PROJECT_SPEC.md)
 - [アーキテクチャと移植対象](docs/ARCHITECTURE.md)
 - [開発ロードマップ](docs/ROADMAP.md)
@@ -26,4 +27,4 @@
 
 端末はDHCPゲートウェイのTCP 48443へ接続する。既存端末を無改造で使うには、Raspberry Piが端末側ネットワークのゲートウェイになる構成が必要。**既存のRaspberry Pi Connect/SSH接続を維持するまで、Wi-Fi/APやNetworkManager設定を変更しない。**
 
-上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト42件とオフライン自己診断が成功しています。Windows依存のPython処理は未移植で、Linux版ホストはまだ完成していません。起動・検証手順は開発環境資料を参照してください。
+上流固定SHAのserver・Windows desktop・関連テストを収録。Piで起動・停止のfixture試験を含むNodeテスト42件とオフライン自己診断が成功しています。Linux用CLI/基本GUIを追加し、実機で呼びかけからGemini Liveの音声回答まで1回確認しました。声のPi試聴、設定保存、反復会話や障害復帰の検証は残っています。起動・検証手順は開発環境資料を参照してください。

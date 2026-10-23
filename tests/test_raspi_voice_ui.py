@@ -119,6 +119,18 @@ class VoiceGuiTests(unittest.TestCase):
         self.app.review_voices()
         self.assertEqual(len([w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)]), 1)
 
+    def test_review_dialog_has_shared_masked_key_cleared_on_preview(self):
+        self.app.review_voices()
+        entry = getattr(self.app, 'preview_key_box', None)
+        self.assertIsNotNone(entry)
+        self.assertEqual(str(entry['textvariable']), str(self.app.key))
+        self.assertTrue(str(entry['show']))
+        entry.insert(0, 'fixture-session-key-long-enough')
+        self.app.sleep_confirmed.set(True); self.app.start_preview(MODEL, 'Kore')
+        self.app.preview_worker.join(3); self.app.pump()
+        self.assertEqual(entry.get(), '')
+        self.assertIn((MODEL, 'Kore'), self.app.heard)
+
     def test_close_cancels_preview_and_drops_private_errors(self):
         self.generator.side_effect = ValueError('PRIVATE_PROVIDER_BODY')
         self.preview(); self.assertNotIn('PRIVATE', self.app.preview_status.get())

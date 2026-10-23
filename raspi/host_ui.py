@@ -94,6 +94,8 @@ class HostWindow(VoiceUi):
         self.fixture_box.configure(state='disabled' if busy or locked else 'normal')
         state = 'disabled' if busy or self.fixture.get() or locked else 'normal'
         self.key_box.configure(state=state); self.model_box.configure(state=state)
+        if self.preview_key_box is not None and self.preview_key_box.winfo_exists():
+            self.preview_key_box.configure(state='disabled' if busy or locked else 'normal')
         self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
         self.review_button.configure(state='disabled' if self.closing else 'normal')
         # The provider's default cannot be restored by a voice command; restart to use it.

@@ -12,7 +12,7 @@ class VoiceUi:
         self.settings = settings if settings is not None else VoiceSettings()
         self.generator = generator; self.player = player
         self.preview_worker = None; self.preview_cancel = threading.Event(); self.preview_job = None
-        self.heard = set(); self.preview_id = 0; self.review_dialog = None
+        self.heard = set(); self.preview_id = 0; self.review_dialog = None; self.preview_key_box = None
         self.sleep_confirmed = tk.BooleanVar(value=False)
         self.preview_status = tk.StringVar(value='試聴はPiの既定の音声出力から流れ、Gemini APIを使用します。')
 
@@ -28,7 +28,7 @@ class VoiceUi:
         dialog.title('日本語の声を試聴・採用'); dialog.transient(self.root)
         self.root.update_idletasks()
         width = min(700, self.root.winfo_screenwidth()-40)
-        height = min(490, self.root.winfo_screenheight()-80)
+        height = min(560, self.root.winfo_screenheight()-80)
         x = self.root.winfo_rootx()+self.root.winfo_width()+20
         if x+width > self.root.winfo_screenwidth()-20: x = self.root.winfo_rootx()+40
         x = max(0, min(x, self.root.winfo_screenwidth()-width-20))
@@ -38,6 +38,9 @@ class VoiceUi:
             if event.widget is dialog and self.review_dialog is dialog: self.review_dialog = None
         dialog.bind('<Destroy>', destroyed, add='+')
         frame = ttk.Frame(dialog, padding=18); frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text='Gemini APIキー（試聴ごとに入力、保存しません）').pack(anchor='w')
+        self.preview_key_box = ttk.Entry(frame, textvariable=self.key, show='●')
+        self.preview_key_box.pack(fill='x', pady=(4, 8))
         model = self.model.get(); candidate = tk.StringVar()
         ttk.Combobox(frame, textvariable=candidate, values=self.settings.candidates(model), state='readonly').pack(fill='x', pady=6)
         ttk.Label(frame, text='ホストを停止し、端末をSleepingにしてから試聴してください。\n最後まで聴いて日本語が適切なら採用します。採用した声だけが通常の一覧に入ります。', wraplength=650).pack(anchor='w', pady=6)
@@ -67,7 +70,7 @@ class VoiceUi:
             self.preview_status.set('接続確認のチェックを外し、モデルと候補の声を確認してください。'); return
         key = self.key.get().strip()
         if not key:
-            self.preview_status.set('メイン画面の非表示欄へAPIキーを入力してください。'); return
+            self.preview_status.set('この画面の非表示欄へAPIキーを入力してください。'); return
         self.key.set(''); self.preview_cancel = threading.Event(); self.preview_id += 1
         job = (self.preview_id, model, voice); self.preview_job = job
         self.heard.discard((model, voice))

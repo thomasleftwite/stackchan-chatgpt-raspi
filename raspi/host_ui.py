@@ -61,7 +61,8 @@ class HostWindow(VoiceUi):
         ttk.Label(frame, text='Gemini Liveモデル').pack(anchor='w')
         self.model_box = ttk.Entry(frame, textvariable=self.model); self.model_box.pack(fill='x', pady=5)
         self.model.trace_add('write', lambda *_: self.refresh_voices())
-        ttk.Label(frame, text='声（サービス既定、または日本語の採用済み）').pack(anchor='w')
+        self.voice_label = tk.StringVar()
+        ttk.Label(frame, textvariable=self.voice_label).pack(anchor='w')
         self.voice = tk.StringVar(value=self.settings.selected(self.model.get()) or 'サービス既定')
         self.voice_box = ttk.Combobox(frame, textvariable=self.voice, state='readonly')
         self.voice_box.pack(fill='x', pady=5)
@@ -97,6 +98,7 @@ class HostWindow(VoiceUi):
 
     def refresh_voices(self):
         values = ('サービス既定',) + self.settings.approved(self.model.get())
+        self.voice_label.set(f'声（採用済み {len(values)-1}件 ＋ サービス既定。▼で一覧を開く）')
         self.voice_box.configure(values=values)
         if self.voice.get() not in values: self.voice.set(self.settings.selected(self.model.get()) or 'サービス既定')
 
@@ -114,7 +116,7 @@ class HostWindow(VoiceUi):
             self.preview_key_box.configure(state='disabled' if busy or locked else 'normal')
         if self.preview_target_box is not None and self.preview_target_box.winfo_exists():
             self.preview_target_box.configure(state='disabled' if busy or locked else 'readonly')
-        self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
+        self.voice_box.configure(state='disabled' if locked or (busy and self.fixture.get()) else 'readonly')
         self.review_button.configure(state='disabled' if self.closing else 'normal')
         # The provider's default cannot be restored by a voice command; restart to use it.
         self.voice_box.configure(values=self.settings.approved(self.model.get()) if busy else
@@ -122,6 +124,7 @@ class HostWindow(VoiceUi):
 
     def choose_voice(self, _event=None):
         if self.preview_running() or self.preview_job is not None or self.closing or self.stopping: return
+        if self.running() and self.fixture.get(): return
         voice = '' if self.voice.get() == 'サービス既定' else self.voice.get()
         try: self.settings.select(self.model.get(), voice)
         except Exception:

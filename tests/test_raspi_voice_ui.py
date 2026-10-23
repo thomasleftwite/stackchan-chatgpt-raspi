@@ -168,6 +168,38 @@ class VoiceGuiTests(unittest.TestCase):
         self.assertIn('待', self.app.preview_status.get())
         self.app.preview_job = None
 
+    def test_multiple_adopted_voices_remain_selectable_in_default_fixture_after_restart(self):
+        for voice in ('Kore', 'Puck'):
+            self.app.sleep_confirmed.set(True); self.app.key.set('fixture-session-key-long-enough')
+            self.app.start_preview(MODEL, voice); self.app.preview_worker.join(3); self.app.pump()
+            self.app.decide_voice(MODEL, voice, True, REASON)
+        import tkinter as tk
+        from raspi.host_ui import HostWindow
+        root = tk.Tk(); root.withdraw()
+        try:
+            factory = Mock()
+            restored = HostWindow(root, factory, settings=VoiceSettings(self.store.path))
+            self.assertTrue(restored.fixture.get())
+            self.assertEqual(set(restored.voice_box['values']), {'サービス既定', 'Kore', 'Puck'})
+            self.assertEqual(str(restored.voice_box['state']), 'readonly')
+            self.assertIn('2件', restored.voice_label.get())
+            restored.voice.set('Kore'); restored.choose_voice()
+            self.assertEqual(VoiceSettings(self.store.path).selected(MODEL), 'Kore')
+            self.assertEqual(set(VoiceSettings(self.store.path).approved(MODEL)), {'Kore', 'Puck'})
+            factory.assert_not_called(); restored.close()
+        finally: root.destroy()
+
+    def test_fixture_running_cannot_send_voice_change_but_stop_unlocks_choices(self):
+        self.store.decide(MODEL, 'Kore', True, REASON, heard=True)
+        self.app.refresh_voices(); self.app.fixture.set(True)
+        self.app.worker = Mock(); self.app.worker.is_alive.return_value = True
+        self.app.controls()
+        self.assertEqual(str(self.app.voice_box['state']), 'disabled')
+        self.app.voice.set('Kore'); self.app.choose_voice()
+        self.assertTrue(self.app.commands.empty())
+        self.app.worker = None; self.app.controls()
+        self.assertEqual(str(self.app.voice_box['state']), 'readonly')
+
     def test_dialog_can_prepare_from_running_fixture_without_api_generation(self):
         entered = threading.Event()
         self.factory.return_value.run.side_effect = lambda stop, *_args, **_kwargs: (entered.set(), stop.wait(3))

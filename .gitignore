@@ -20,3 +20,7 @@ bridge.local.json.*
 .packaging/
 releases/
 .runtime/
+
+# Linux private voice preferences and corruption backups
+voice-settings.json
+voice-settings.json.*

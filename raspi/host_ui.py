@@ -5,7 +5,9 @@ import time
 import tkinter as tk
 from tkinter import ttk
 
-from raspi.host import make_service, public_event, voice_candidates
+from raspi.host import make_service, public_event
+from raspi.voice_ui import VoiceUi
+from raspi.voice_preview import generate_sample, play_pcm
 
 LABELS = {
     'ready': '待受中。端末からの接続を受け付けます。',
@@ -24,10 +26,12 @@ FAILURE_LABELS = {'AUTH': 'APIキーの認証に失敗しました。', 'QUOTA':
     'MODEL': '指定したモデルを利用できません。', 'TIMEOUT': '応答が時間切れになりました。'}
 
 
-class HostWindow:
-    def __init__(self, root, factory=make_service, clock=time.monotonic):
+class HostWindow(VoiceUi):
+    def __init__(self, root, factory=make_service, clock=time.monotonic, *, settings=None,
+                 generator=generate_sample, player=play_pcm):
         self.root = root; self.factory = factory; self.clock = clock
         self.worker = None; self.closing = False; self.stopping = False
+        self.init_voices(settings, generator, player)
         self.events = queue.Queue(); self.commands = queue.Queue(maxsize=32)
         self.stop = threading.Event(); self.request_id = 0
         self.last_seen = None; self.host_ready = False; self.failed = False
@@ -44,13 +48,17 @@ class HostWindow:
         ttk.Label(frame, text='Gemini Liveモデル').pack(anchor='w')
         self.model_box = ttk.Entry(frame, textvariable=self.model); self.model_box.pack(fill='x', pady=5)
         self.model.trace_add('write', lambda *_: self.refresh_voices())
-        ttk.Label(frame, text='声（サービス既定、またはカタログから選択）').pack(anchor='w')
-        self.voice = tk.StringVar(value='サービス既定')
+        ttk.Label(frame, text='声（サービス既定、または日本語の採用済み）').pack(anchor='w')
+        self.voice = tk.StringVar(value=self.settings.selected(self.model.get()) or 'サービス既定')
         self.voice_box = ttk.Combobox(frame, textvariable=self.voice, state='readonly')
         self.voice_box.pack(fill='x', pady=5)
         self.voice_box.bind('<<ComboboxSelected>>', self.choose_voice)
-        self.voice_status = tk.StringVar(value='選択した声を質問に使用します。試聴・採用評価・保存は今後対応します。')
+        self.voice_status = tk.StringVar(value='採用した声と選択を保存します。APIキー・音声は保存しません。')
         ttk.Label(frame, textvariable=self.voice_status, wraplength=700).pack(anchor='w')
+        self.review_button = ttk.Button(frame, text='声を試聴・採用・保存', command=self.review_voices)
+        self.review_button.pack(anchor='w', pady=5)
+        if self.settings.load_error:
+            self.voice_status.set('声設定を読み込めません。原本を保持し、明示的な再評価で復旧できます。')
         ttk.Label(frame, text='接続確認を外すと、端末からの質問時にGemini APIを使用します。').pack(anchor='w', pady=8)
         buttons = ttk.Frame(frame); buttons.pack(anchor='w')
         self.start_button = ttk.Button(buttons, text='ホストサービスを開始', command=self.start)
@@ -75,23 +83,29 @@ class HostWindow:
         return self.worker is not None and self.worker.is_alive()
 
     def refresh_voices(self):
-        values = ('サービス既定',) + voice_candidates(self.model.get())
+        values = ('サービス既定',) + self.settings.approved(self.model.get())
         self.voice_box.configure(values=values)
-        if self.voice.get() not in values: self.voice.set('サービス既定')
+        if self.voice.get() not in values: self.voice.set(self.settings.selected(self.model.get()) or 'サービス既定')
 
     def controls(self):
-        busy = self.running(); locked = self.closing or self.stopping
+        busy = self.running(); locked = self.closing or self.stopping or self.preview_running() or self.preview_job is not None
         self.start_button.configure(state='disabled' if busy or locked else 'normal')
         self.stop_button.configure(state='normal' if busy and not locked else 'disabled')
         self.fixture_box.configure(state='disabled' if busy or locked else 'normal')
         state = 'disabled' if busy or self.fixture.get() or locked else 'normal'
         self.key_box.configure(state=state); self.model_box.configure(state=state)
         self.voice_box.configure(state='disabled' if self.fixture.get() or locked else 'readonly')
+        self.review_button.configure(state='disabled' if self.closing else 'normal')
         # The provider's default cannot be restored by a voice command; restart to use it.
-        self.voice_box.configure(values=voice_candidates(self.model.get()) if busy else
-            ('サービス既定',) + voice_candidates(self.model.get()))
+        self.voice_box.configure(values=self.settings.approved(self.model.get()) if busy else
+            ('サービス既定',) + self.settings.approved(self.model.get()))
 
     def choose_voice(self, _event=None):
+        if self.preview_running() or self.preview_job is not None or self.closing or self.stopping: return
+        voice = '' if self.voice.get() == 'サービス既定' else self.voice.get()
+        try: self.settings.select(self.model.get(), voice)
+        except Exception:
+            self.voice_status.set('声の選択を保存できません。採用評価と設定ファイルの権限を確認してください。'); return
         if not self.running():
             self.voice_status.set('選択した声を次のホスト起動で使用します。'); return
         if self.stopping or self.closing: return
@@ -102,13 +116,19 @@ class HostWindow:
         self.voice_status.set('声の変更を送信中です。進行中の回答の声は変わりません。')
 
     def start(self):
-        if self.running() or self.closing: return
+        if self.running() or self.closing or self.preview_running() or self.preview_job is not None: return
         # Finish handling the previous run before resetting the monitor.
         while True:
             try: self.handle_event(self.events.get_nowait())
             except queue.Empty: break
         fixture = self.fixture.get(); key = self.key.get() if not fixture else ''; model = self.model.get()
         voice = '' if self.voice.get() == 'サービス既定' else self.voice.get()
+        if not fixture and voice and voice not in self.settings.approved(model):
+            self.status.set('声を試聴して採用するか、サービス既定を選択してください。'); return
+        if not fixture and not self.settings.load_error:
+            try: self.settings.select(model, voice)
+            except Exception:
+                self.status.set('声の選択を保存できませんでした。設定ファイルの権限を確認してください。'); return
         self.key.set(''); self.stop = threading.Event(); self.commands = queue.Queue(maxsize=32)
         self.stopping = False; self.failed = False; self.host_ready = False; self.last_seen = None
         self.status.set('起動中…'); self.host_status.set('ホスト：起動中'); self.session_status.set('会話：待機')
@@ -133,6 +153,8 @@ class HostWindow:
         self.history.see('end'); self.history.configure(state='disabled')
 
     def handle_event(self, raw):
+        if isinstance(raw, dict) and raw.get('internal') in ('preview-playing', 'preview-ended'):
+            self.preview_event(raw); return
         if isinstance(raw, dict) and raw.get('event') == 'finished':
             self.host_ready = False; self.host_status.set('ホスト：停止中（エラー）' if self.failed else 'ホスト：停止中')
             self.session_status.set('会話：待機'); return
@@ -184,11 +206,11 @@ class HostWindow:
             self.handle_event(event)
         if not self.running(): self.stopping = False
         self.update_monitor(); self.controls()
-        if self.closing and not self.running(): self.root.destroy(); return
+        if self.closing and not self.running() and not self.preview_running() and self.preview_job is None: self.root.destroy(); return
         self.after_id = self.root.after(100, self.pump)
 
     def close(self):
-        self.closing = True; self.key.set(''); self.request_stop(); self.controls()
+        self.closing = True; self.key.set(''); self.stop_preview(); self.request_stop(); self.controls()
 
 
 def main():

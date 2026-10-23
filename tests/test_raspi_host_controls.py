@@ -3,6 +3,7 @@ import io
 import json
 import queue
 import threading
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -58,7 +59,13 @@ class ControlsGuiTests(unittest.TestCase):
             self.entered.set(); callback({'event': 'ready'}); stop.wait(5)
             callback({'event': 'stopped'})
         self.factory.return_value.run.side_effect = run
-        self.app = HostWindow(self.root, self.factory, clock=lambda: self.now)
+        from raspi.voice_settings import VoiceSettings, REVIEW_REASONS
+        from pathlib import Path
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        settings = VoiceSettings(Path(temp.name)/'voice-settings.json')
+        for voice in ('Kore', 'Puck'):
+            settings.decide('gemini-3.8-live', voice, True, REVIEW_REASONS['approved'][0], heard=True)
+        self.app = HostWindow(self.root, self.factory, clock=lambda: self.now, settings=settings)
         self.addCleanup(self.shutdown)
 
     def shutdown(self):

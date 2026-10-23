@@ -8,7 +8,7 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 
 - `server/wireless-host.ts`: 標準入力JSON `{host,port,subnet,fixture?}` で待受先を指定。通常のAP待受と、明示したfixtureに限るループバック検証に対応。
 - `server/gemini-server.ts`, `server/gemini-*`, `server/voice-control.ts`, `server/voice-preview.ts`: 原則再利用。
-- `desktop/voices.py` と声レビュー処理: OS依存のない部分を抽出できるか検討。
+- `desktop/voices.py` のカタログと評価理由を再利用。Linuxの権限・保存・再生は `raspi/voice_*.py` に隔離する。
 
 ### API不要の起動・停止検証
 
@@ -24,7 +24,11 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 - 端末モニターは既存health/セッション開始/再生完了イベントの受信時刻を保持。既存端末は一度成功したhealthを再送しないため、30秒以上未受信なら定期通知なし・現在の接続は判定できない旨を示し、端末の画面状態やWi-Fi切断を断定しない。履歴は固定文言80件に限定し、provider本文・PCM・声の選択値を記録しない。
 - `raspi/provision*.py`: 端末WiFiManager経由の接続先設定とPi AP復帰。実機設定の変更は承認済みの操作範囲に限る。
 
-Windows用desktopは保持し、Linuxのキー永続保護・声管理/試聴は今後の実装とする。
+- `raspi/voice_preview.py`: 既存の`server/dist/voice-preview.js`を停止中ホストの別プロセスとして呼び出す。明示入力キーを子の環境にだけ渡し、stdoutを650000 bytes、PCMを480000 bytes（24kHz mono S16_LE・最大10秒）に制限。48秒で生成を打ち切り、終了時は自身のプロセスグループを回収する。PCMはファイルへ保存せずALSAのaplayへ渡し、再生・中断後にバッファを消去する。
+- `raspi/voice_ui.py`: ホスト停止中・端末Sleeping確認後の明示操作で生成/再生。試聴中はホストの開始を禁止し、再生完了した候補だけ採用可能。通常一覧は採用済みの声とサービス既定。稼働中の選択変更は既存voiceコマンドを使用し、使用中の声の除外はホストを停止する。
+- `raspi/voice_settings.py`: XDGの専用ディレクトリ700・ファイル600で声の評価と選択だけ保存。カタログrevision/モデルを照合。原子的置換とfsync、サイズ/権限/シンボリックリンク検証、破損時の明示再評価による原本保全・復旧を提供。GUIとCLIは同じ保存選択を読む。
+
+Windows用desktopと既存serverは変更しない。LinuxのAPIキー永続保護と、稼働中ホストでの試聴は今後の実装とする。
 
 ## Windows依存の差し替え候補
 

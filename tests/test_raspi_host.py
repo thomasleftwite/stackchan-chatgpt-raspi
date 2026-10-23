@@ -9,6 +9,7 @@ import socket
 import subprocess
 import sys
 import threading
+import tempfile
 import unittest
 import urllib.request
 from unittest.mock import Mock, patch
@@ -151,7 +152,9 @@ class HostGuiTests(unittest.TestCase):
         def run(stop, callback, **kwargs): entered.set(); stop.wait(2)
         factory.return_value.run.side_effect = run
         try:
-            app = HostWindow(root, factory)
+            from raspi.voice_settings import VoiceSettings
+            temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+            app = HostWindow(root, factory, settings=VoiceSettings(Path(temp.name)/'voice-settings.json'))
             self.assertTrue(app.fixture.get())
             app.fixture.set(False); app.key.set('fixture-session-key-long-enough'); app.start()
             self.assertTrue(entered.wait(2)); self.assertEqual(app.key.get(), '')

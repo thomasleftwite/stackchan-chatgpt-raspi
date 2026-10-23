@@ -165,7 +165,8 @@ class HostWindow:
         elif self.last_seen is None: self.device_status.set('端末：通信待ち（未確認）')
         else:
             age = max(0, int(self.clock() - self.last_seen))
-            label = '通信を確認' if age < 30 else '通信未確認（切断の可能性）'
+            # Existing terminals cache a successful health check; idle time is not a heartbeat timeout.
+            label = '通信を確認' if age < 30 else '定期通知なし（現在の接続は判定できません）'
             self.device_status.set(f'端末：{label} / 最終受信 {age}秒前')
 
     def cancel_pump(self):

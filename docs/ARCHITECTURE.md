@@ -21,7 +21,7 @@ ESP32-S3 (16kHz PCM) → Wi-Fi AP → Raspberry Pi TCP 48443 HTTP/WS → Node.js
 - `raspi/host_network.py`: NetworkManagerのAP/sharedと一意なprivate IPv4/サブネットを読み取る。設定変更は行わない。
 - `raspi/host.py`: ARM64 Nodeを起動し、標準入力で待受設定を渡す。キーは明示入力のセッション内だけで保持し、子の環境へ渡す。EOF→SIGTERM→SIGKILLで自身のプロセスグループを回収する。
 - `raspi/host_ui.py`: Tkinterで声選択・開始/停止・通信/会話モニターを表示。声カタログは既存serverのJSONを共有し、稼働中の変更は有界キューから既存stdin voiceコマンドへ渡す。確認応答は安全なrequest IDだけをGUIへ返し、進行中の回答は既存VoiceControlのスナップショットを維持する。初期状態はAPI不要のfixture。Live利用時も開始時にキー欄を消去する。
-- 端末モニターは既存health/セッション開始/再生完了イベントの受信時刻を保持。30秒以上未受信なら通信未確認とし、端末の画面状態やWi-Fi切断を断定しない。履歴は固定文言80件に限定し、provider本文・PCM・声の選択値を記録しない。
+- 端末モニターは既存health/セッション開始/再生完了イベントの受信時刻を保持。既存端末は一度成功したhealthを再送しないため、30秒以上未受信なら定期通知なし・現在の接続は判定できない旨を示し、端末の画面状態やWi-Fi切断を断定しない。履歴は固定文言80件に限定し、provider本文・PCM・声の選択値を記録しない。
 - `raspi/provision*.py`: 端末WiFiManager経由の接続先設定とPi AP復帰。実機設定の変更は承認済みの操作範囲に限る。
 
 Windows用desktopは保持し、Linuxのキー永続保護・声管理/試聴は今後の実装とする。

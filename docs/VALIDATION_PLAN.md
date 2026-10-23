@@ -215,3 +215,12 @@
 - `PATH="$PWD/.runtime/node-v22.23.4-linux-arm64/bin:$PATH" npm --prefix server run build` 成功。`.runtime/node-v22.23.4-linux-arm64/bin/node --test --test-timeout=10000 server/dist/test/*.test.js` は47件成功、失敗/スキップ0、終了コード0。
 - `python3 -m py_compile raspi/host.py raspi/host_ui.py tests/test_raspi_host_controls.py`、`git diff --check` 成功。
 - 未検証: 新GUIで実端末の声を変更した際の聴感、実API会話、Windows実環境、長時間/画面サイズ別の操作。試聴・採用評価・保存とキー永続保護は未実装。端末状態は通信イベントからの観測であり、Ready/Sleepingの直接取得やWi-Fi断の確定検知ではない。
+
+## 2026-10-23 新GUIの実AP起動停止・実音声/声変更の確認
+
+- 開始HEAD: `2aae26c`、`feat/raspi-host-controls`（PR #7）。利用者の「ok、すすめて」により実機確認を継続。Git除外の一時GUIハーネスで製品HostWindow/HostServiceを使用し、入力キー/音声/質問本文/選択した声を記録せず固定イベントだけ観測した。
+- APのfixture開始/16秒待機/停止を2回実施。どちらもreadyと停止/子プロセス回収を確認。1回目はdevice-onlineも受信。2回目は観測中のdevice-onlineなしであり、端末の再接続成功とは扱わない。
+- 利用者が新GUIの非表示欄にキーを入力してホストを開始。2回ともsession-busy→turn-complete→voice-played→session-idleを受信し、最初の再生完了後のvoiceコマンドにvoice-selectedの確認応答を受信した。利用者も「2回とも回答し、声も変わった」と確認。2回目の再生後にホストを停止し、stoppedを受信。キーは保存せず、端末ファームと実機ネットワーク設定の変更なし。
+- 状態表示の修正: 固定SHAの既存`src/WirelessLink.cpp`ではhealth成功後にonlineを記憶し、Wi-Fi断/会話失敗でofflineになるまで待機中のGETを再送しない。したがって30秒の未受信から切断を示唆する表示は不適切。固定時計のGUI回帰で旧表示が失敗することを確認後、「定期通知なし（現在の接続は判定できません）」へ変更。新たな通信・監視ポーリングやファーム変更は追加しない。
+- 修正後の`python3 -m unittest discover -s tests -v`: 95件中91成功・Windows専用4件スキップ、終了コード0。`py_compile`と`git diff --check`成功。Node/serverは変更しておらず、直前のbuild/47件成功を参照し再実行しない。
+- 未検証: 実Wi-Fi断や実API中断の復帰、Pi再起動、長時間稼働、Windows実環境。Pi自身の声試聴/採用/保存とキー永続保護は引き続き未実装。

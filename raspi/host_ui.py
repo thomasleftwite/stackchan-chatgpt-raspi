@@ -43,6 +43,8 @@ class HostWindow(VoiceUi):
         self.fixture_box = ttk.Checkbutton(frame, text='APIを使わず接続だけ確認（無音応答）',
             variable=self.fixture, command=self.controls)
         self.fixture_box.pack(anchor='w', pady=12)
+        self.mode_status = tk.StringVar()
+        ttk.Label(frame, textvariable=self.mode_status, wraplength=700).pack(anchor='w')
         self.key_store = key_store if key_store is not None else KeyStore()
         self.key = tk.StringVar(); self.model = tk.StringVar(value='gemini-3.8-live')
         self.key_status = tk.StringVar()
@@ -105,6 +107,9 @@ class HostWindow(VoiceUi):
     def controls(self):
         self.review_controls()
         busy = self.running(); locked = self.closing or self.stopping or self.preview_running() or self.preview_job is not None
+        self.mode_status.set('端末試聴モード：試聴画面の案内に従ってください。' if self.preview_running() or self.preview_job is not None else
+            '接続確認モード：無音応答です。通常の音声回答にはチェックを外してホストを開始してください。' if self.fixture.get() else
+            '通常会話モード：ホスト開始後、端末からの質問時にGemini APIを使用します。')
         self.start_button.configure(state='disabled' if busy or locked else 'normal')
         self.stop_button.configure(state='normal' if busy and not locked else 'disabled')
         self.fixture_box.configure(state='disabled' if busy or locked else 'normal')

@@ -18,6 +18,7 @@ RUNTIME_PYTHON = ('__init__.py', 'host.py', 'host_network.py', 'host_ui.py', 'ke
     'voice_ui.py', 'voice_settings.py', 'voice_preview.py', 'provision.py', 'provision_network.py',
     'provision_ui.py', 'launcher.py', 'diagnostics.py')
 SECRET = re.compile(rb'AIza[0-9A-Za-z_-]{35}|gh[pousr]_[0-9A-Za-z]{30,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----')
+LAUNCHER = '#!/bin/sh\nset -eu\napp_root=$(CDPATH= cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "$0")")/.." && pwd)\nexec /usr/bin/python3 -I -B "$app_root/raspi/launcher.py" "$@"\n'
 
 
 def _copy(source, target, *, executable=False):
@@ -57,9 +58,14 @@ def build(output, *, allow_dirty=False):
         readme.chmod(0o644)
         for filename in ('package.json', 'package-lock.json', 'voice-catalog.json'):
             _copy(ROOT/'server'/filename, stage/'server'/filename)
-        compiled = tuple((ROOT/'server/dist').glob('*.js'))
-        if not compiled: raise ReleaseError()
-        for source in compiled: _copy(source, stage/'server/dist'/source.name)
+        # Never ship ignored/stale dist files from the development checkout.
+        compiled = Path(directory)/'compiled'
+        subprocess.run([str(node), str(ROOT/'server/node_modules/typescript/bin/tsc'),
+            '--project', str(ROOT/'server/tsconfig.json'), '--outDir', str(compiled)],
+            cwd=ROOT, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        sources = tuple(compiled.glob('*.js'))
+        if not sources: raise ReleaseError()
+        for source in sources: _copy(source, stage/'server/dist'/source.name)
         packages = json.loads((ROOT/'server/package-lock.json').read_text())['packages']
         for package, record in packages.items():
             if not package or record.get('dev', False): continue
@@ -74,7 +80,7 @@ def build(output, *, allow_dirty=False):
         _copy(node, stage/'runtime/node/bin/node', executable=True)
         _copy(node_root/'LICENSE', stage/'runtime/node/LICENSE')
         launcher = stage/'bin/stackchan-raspi'; launcher.parent.mkdir()
-        launcher.write_text('#!/bin/sh\nset -eu\napp_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)\nexec /usr/bin/python3 -I -B "$app_root/raspi/launcher.py" "$@"\n')
+        launcher.write_text(LAUNCHER)
         launcher.chmod(0o755)
         metadata = stage/'build-source.json'
         metadata.write_text(json.dumps({'base_commit': commit, 'dirty': dirty}, sort_keys=True)+'\n'); metadata.chmod(0o644)

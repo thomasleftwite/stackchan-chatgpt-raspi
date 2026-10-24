@@ -92,5 +92,16 @@ class ReleaseInstallTests(unittest.TestCase):
         self.assertIn('DEDICATED_AP: FAIL', output.getvalue())
         self.assertIn('WIRED_DEFAULT_ONLY: FAIL', output.getvalue())
 
+    def test_generated_launcher_runs_through_user_bin_symlink(self):
+        from raspi.release_build import LAUNCHER
+        app = self.root/'app with spaces'; (app/'bin').mkdir(parents=True); (app/'raspi').mkdir()
+        (app/'raspi/launcher.py').write_text('print("LAUNCH_PASS")\n')
+        executable = app/'bin/stackchan-raspi'; executable.write_text(LAUNCHER); executable.chmod(0o755)
+        user_bin = self.root/'user-bin'; user_bin.mkdir()
+        link = user_bin/'stackchan-raspi'; link.symlink_to(executable)
+        result = subprocess.run([str(link)], capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), 'LAUNCH_PASS')
+
 
 if __name__ == '__main__': unittest.main()

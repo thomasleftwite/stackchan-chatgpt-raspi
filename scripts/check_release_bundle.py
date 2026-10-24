@@ -20,9 +20,10 @@ def check(bundle):
     with tempfile.TemporaryDirectory(prefix='stackchan-clean-install-') as directory:
         root = Path(directory); prefix = root/'application'
         installer.install(bundle, prefix)
+        installer.shortcuts(prefix, root/'applications', root/'bin')
         release = (prefix/'current').resolve()
         env = {'PATH': '/usr/bin:/bin', 'XDG_CONFIG_HOME': str(root/'config'), 'XDG_DATA_HOME': str(root/'data')}
-        subprocess.run([str(release/'bin/stackchan-raspi'), '--diagnose'], env=env, cwd=root,
+        subprocess.run([str(root/'bin/stackchan-raspi'), '--diagnose'], env=env, cwd=root,
             check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15)
         node = release/'runtime/node/bin/node'
         with socket.socket() as reserved: reserved.bind(('127.0.0.1', 0)); port = reserved.getsockname()[1]

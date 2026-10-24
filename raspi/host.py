@@ -46,7 +46,8 @@ def voice_candidates(model):
 
 def resolve_node(explicit=None):
     pinned = ROOT / '.runtime/node-v22.23.4-linux-arm64/bin/node'
-    candidate = explicit or (str(pinned) if pinned.is_file() else shutil.which('node'))
+    bundled = ROOT/'runtime/node/bin/node'
+    candidate = explicit or (str(bundled) if bundled.is_file() else str(pinned) if pinned.is_file() else shutil.which('node'))
     if not candidate: raise HostError('NODE_REQUIRED')
     try:
         path = Path(candidate).resolve()
